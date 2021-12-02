@@ -2,9 +2,7 @@ package net.digihippo.aoc;
 
 import org.junit.jupiter.api.Test;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -26,7 +24,7 @@ class OneTest
 260
 263
 """;
-        assertEquals(7, One.countIncreases(asInputStream(input)));
+        assertEquals(7, One.countIncreases(Inputs.asInputStream(input)));
     }
 
     @Test
@@ -51,7 +49,7 @@ class OneTest
 260
 263
 """;
-        assertEquals(5, One.countSumIncreases(asInputStream(input)));
+        assertEquals(5, One.countSumIncreases(Inputs.asInputStream(input)));
     }
 
     @Test
@@ -59,7 +57,4 @@ class OneTest
          System.out.println(One.countSumIncreases(this.getClass().getResourceAsStream("/one.txt")));
     }
 
-    private static ByteArrayInputStream asInputStream(String input) {
-        return new ByteArrayInputStream(input.getBytes(StandardCharsets.UTF_8));
-    }
 }

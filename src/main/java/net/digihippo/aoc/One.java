@@ -1,6 +1,5 @@
 package net.digihippo.aoc;
 
-import java.awt.event.WindowStateListener;
 import java.io.*;
 import java.util.Arrays;
 import java.util.function.Consumer;
@@ -10,7 +9,7 @@ public class One
     public static int countIncreases(InputStream input) throws IOException {
 
         final IncreaseCounter counter = new IncreaseCounter();
-        processLines(input, counter);
+        Lines.processLines(input, counter);
 
         return counter.increases;
     }
@@ -18,19 +17,9 @@ public class One
     public static int countSumIncreases(InputStream inputStream) throws IOException {
 
         final SumIncreaseCounter counter = new SumIncreaseCounter();
-        processLines(inputStream, counter);
+        Lines.processLines(inputStream, counter);
 
         return counter.increases();
-    }
-
-    private static void processLines(InputStream inputStream, Consumer<String> callback) throws IOException {
-        try (final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream))) {
-            String line;
-            while ((line = bufferedReader.readLine()) != null)
-            {
-                callback.accept(line);
-            }
-        }
     }
 
     private static final class IncreaseCounter implements Consumer<String>
