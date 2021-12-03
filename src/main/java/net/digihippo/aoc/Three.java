@@ -14,7 +14,7 @@ public class Three
 
         final Output output = callback.power();
 
-        return Integer.parseInt(output.epsilon.toString(), 2) * Integer.parseInt(output.gamma.toString(), 2);
+        return Integer.parseInt(not(output.dominantBits), 2) * Integer.parseInt(output.dominantBits, 2);
     }
 
     public static int computePartTwo(InputStream stream) throws IOException {
@@ -24,15 +24,22 @@ public class Three
         return callback.power();
     }
 
-    private static final class Output
-    {
-        private final String gamma;
-        private final String epsilon;
+    private record Output(String dominantBits) {}
 
-        private Output(String gamma, String epsilon) {
-            this.gamma = gamma;
-            this.epsilon = epsilon;
+    private static String not(final String binaryChars)
+    {
+        final StringBuilder notted = new StringBuilder();
+        for (int i = 0; i < binaryChars.length(); i++) {
+            if (binaryChars.charAt(i) == '1')
+            {
+                notted.append('0');
+            }
+            else
+            {
+                notted.append('1');
+            }
         }
+        return notted.toString();
     }
 
     private static class Computer implements Consumer<String> {
@@ -57,7 +64,6 @@ public class Three
 
         public Output power() {
             final StringBuilder gamma = new StringBuilder();
-            final StringBuilder epsilon = new StringBuilder();
 
             final int discriminator;
             if (count % 2 == 1)
@@ -72,68 +78,49 @@ public class Three
             for (int counter : counters) {
                 if (counter > discriminator) {
                     gamma.append('1');
-                    epsilon.append('0');
                 } else {
-                    epsilon.append('1');
                     gamma.append('0');
                 }
             }
 
-            return new Output(gamma.toString(), epsilon.toString());
+            return new Output(gamma.toString());
         }
     }
 
     private static class ReducingComputer implements Consumer<String> {
         final List<String> inputs = new ArrayList<>();
-        final Computer computer = new Computer();
 
         @Override
         public void accept(String s) {
             inputs.add(s);
-            computer.accept(s);
         }
 
         public int power() {
-            final List<String> oxygen = new ArrayList<>(inputs);
-            final List<String> co2 = new ArrayList<>(inputs);
+            final String oxygen = reduce(inputs, true);
+            final String co2 = reduce(inputs, false);
 
-            final Output power = computer.power();
+            return Integer.parseInt(oxygen, 2) * Integer.parseInt(co2, 2);
+        }
 
-            int bitIndex = 0;
-            char acceptable = power.gamma.charAt(bitIndex);
-            while (oxygen.size() != 1)
-            {
-                final int bii = bitIndex;
-                final char pred = acceptable;
-                oxygen.removeIf(s -> s.charAt(bii) != pred);
-                bitIndex++;
+        private String reduce(List<String> inputs, boolean dominant) {
+            final List<String> copy = new ArrayList<>(inputs);
 
-                // recompute :-/
-                if (oxygen.size() != 1) {
-                    final Computer computer = new Computer();
-                    oxygen.forEach(computer);
-                    acceptable = computer.power().gamma.charAt(bitIndex);
+            for (int i = 0; i < copy.get(0).length(); i++) {
+                final Computer computer = new Computer();
+                copy.forEach(computer);
+
+                final int bii = i;
+                final String dominantBits = computer.power().dominantBits;
+                final char pred =
+                        dominant ? dominantBits.charAt(i) : not(dominantBits).charAt(i);
+                copy.removeIf(s -> s.charAt(bii) != pred);
+
+                if (copy.size() == 1) {
+                    return copy.get(0);
                 }
             }
 
-            bitIndex = 0;
-            acceptable = power.epsilon.charAt(bitIndex);
-            while (co2.size() != 1)
-            {
-                final int bii = bitIndex;
-                final char pred = acceptable;
-                co2.removeIf(s -> s.charAt(bii) != pred);
-                bitIndex++;
-
-                // recompute :-/
-                if (co2.size() != 1) {
-                    final Computer computer = new Computer();
-                    co2.forEach(computer);
-                    acceptable = computer.power().epsilon.charAt(bitIndex);
-                }
-            }
-
-            return Integer.parseInt(oxygen.get(0), 2) * Integer.parseInt(co2.get(0), 2);
+            throw new IllegalStateException();
         }
     }
 }

@@ -34,10 +34,6 @@ class ThreeTest {
         System.out.println(Three.compute(puzzleInput()));
     }
 
-    private InputStream puzzleInput() {
-        return getClass().getResourceAsStream("/three.txt");
-    }
-
     @Test
     void partTwo() throws IOException {
         assertEquals(230, Three.computePartTwo(Inputs.asInputStream(testInput)));
@@ -46,5 +42,9 @@ class ThreeTest {
     @Test
     void partTwoReal() throws IOException {
         System.out.println(Three.computePartTwo(puzzleInput()));
+    }
+
+    private InputStream puzzleInput() {
+        return getClass().getResourceAsStream("/three.txt");
     }
 }
