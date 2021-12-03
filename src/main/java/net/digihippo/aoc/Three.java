@@ -8,46 +8,58 @@ import java.util.function.Consumer;
 
 public class Three
 {
-    public static int compute(InputStream stream) throws IOException {
+    public static int compute(InputStream stream) throws IOException
+    {
         final Computer callback = new Computer();
         Lines.processLines(stream, callback);
 
-        final Output output = callback.power();
+        final BinaryString binaryString = callback.power();
 
-        return Integer.parseInt(not(output.dominantBits), 2) * Integer.parseInt(output.dominantBits, 2);
+        return binaryString.toInt() * binaryString.not().toInt();
     }
 
-    public static int computePartTwo(InputStream stream) throws IOException {
+    public static int computePartTwo(InputStream stream) throws IOException
+    {
         final ReducingComputer callback = new ReducingComputer();
         Lines.processLines(stream, callback);
 
         return callback.power();
     }
 
-    private record Output(String dominantBits) {}
-
-    private static String not(final String binaryChars)
+    private record BinaryString(String bits)
     {
-        final StringBuilder notted = new StringBuilder();
-        for (int i = 0; i < binaryChars.length(); i++) {
-            if (binaryChars.charAt(i) == '1')
-            {
-                notted.append('0');
-            }
-            else
-            {
-                notted.append('1');
-            }
+        public BinaryString not()
+        {
+            return new BinaryString(notBits(bits));
         }
-        return notted.toString();
+
+        public int toInt()
+        {
+            return Integer.parseInt(bits, 2);
+        }
+
+        private String notBits(final String binaryChars)
+        {
+            final StringBuilder result = new StringBuilder();
+            for (int i = 0; i < binaryChars.length(); i++) {
+                if (binaryChars.charAt(i) == '1') {
+                    result.append('0');
+                } else {
+                    result.append('1');
+                }
+            }
+            return result.toString();
+        }
     }
 
-    private static class Computer implements Consumer<String> {
+    private static class Computer implements Consumer<String>
+    {
         private int[] counters = null;
         private int count = 0;
 
         @Override
-        public void accept(String s) {
+        public void accept(String s)
+        {
             if (counters == null)
             {
                 counters = new int[s.length()];
@@ -62,7 +74,8 @@ public class Three
             count++;
         }
 
-        public Output power() {
+        public BinaryString power()
+        {
             final StringBuilder gamma = new StringBuilder();
 
             final int discriminator;
@@ -83,11 +96,12 @@ public class Three
                 }
             }
 
-            return new Output(gamma.toString());
+            return new BinaryString(gamma.toString());
         }
     }
 
-    private static class ReducingComputer implements Consumer<String> {
+    private static class ReducingComputer implements Consumer<String>
+    {
         final List<String> inputs = new ArrayList<>();
 
         @Override
@@ -96,13 +110,13 @@ public class Three
         }
 
         public int power() {
-            final String oxygen = reduce(inputs, true);
-            final String co2 = reduce(inputs, false);
+            final BinaryString oxygen = reduce(inputs, true);
+            final BinaryString co2 = reduce(inputs, false);
 
-            return Integer.parseInt(oxygen, 2) * Integer.parseInt(co2, 2);
+            return oxygen.toInt() * co2.toInt();
         }
 
-        private String reduce(List<String> inputs, boolean dominant) {
+        private BinaryString reduce(List<String> inputs, boolean dominant) {
             final List<String> copy = new ArrayList<>(inputs);
 
             for (int i = 0; i < copy.get(0).length(); i++) {
@@ -110,13 +124,12 @@ public class Three
                 copy.forEach(computer);
 
                 final int bii = i;
-                final String dominantBits = computer.power().dominantBits;
-                final char pred =
-                        dominant ? dominantBits.charAt(i) : not(dominantBits).charAt(i);
+                final String result = dominant ? computer.power().bits : computer.power().not().bits;
+                final char pred = result.charAt(i);
                 copy.removeIf(s -> s.charAt(bii) != pred);
 
                 if (copy.size() == 1) {
-                    return copy.get(0);
+                    return new BinaryString(copy.get(0));
                 }
             }
 
