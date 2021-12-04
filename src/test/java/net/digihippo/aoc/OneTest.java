@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
+import static net.digihippo.aoc.Inputs.puzzleInput;
 import static org.junit.jupiter.api.Assertions.*;
 
 class OneTest
@@ -30,7 +31,7 @@ class OneTest
     @Test
     void realInput() throws IOException
     {
-        System.out.println(One.countIncreases(this.getClass().getResourceAsStream("/one.txt")));
+        System.out.println(One.countIncreases(puzzleInput("one.txt")));
     }
 
     @Test
@@ -54,7 +55,7 @@ class OneTest
 
     @Test
     void partTwoForRealz() throws IOException {
-         System.out.println(One.countSumIncreases(this.getClass().getResourceAsStream("/one.txt")));
+         System.out.println(One.countSumIncreases(puzzleInput("one.txt")));
     }
 
 }

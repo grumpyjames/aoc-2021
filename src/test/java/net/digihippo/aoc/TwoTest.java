@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.io.InputStream;
 
+import static net.digihippo.aoc.Inputs.puzzleInput;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TwoTest
@@ -26,7 +27,7 @@ class TwoTest
 
     @Test
     void realInput() throws IOException {
-        System.out.println(Two.execute(puzzleInput()));
+        System.out.println(Two.execute(puzzleInput("two.txt")));
     }
 
     @Test
@@ -36,10 +37,6 @@ class TwoTest
 
     @Test
     void partTwoForReal() throws IOException {
-        System.out.println(Two.executeTwo(puzzleInput()));
-    }
-
-    private InputStream puzzleInput() {
-        return getClass().getResourceAsStream("/two.txt");
+        System.out.println(Two.executeTwo(puzzleInput("two.txt")));
     }
 }

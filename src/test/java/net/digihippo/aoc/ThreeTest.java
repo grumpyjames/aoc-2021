@@ -3,7 +3,6 @@ package net.digihippo.aoc;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -31,7 +30,7 @@ class ThreeTest {
 
     @Test
     void realPartOne() throws IOException {
-        System.out.println(Three.compute(puzzleInput()));
+        System.out.println(Three.compute(Inputs.puzzleInput("three.txt")));
     }
 
     @Test
@@ -41,10 +40,6 @@ class ThreeTest {
 
     @Test
     void partTwoReal() throws IOException {
-        System.out.println(Three.computePartTwo(puzzleInput()));
-    }
-
-    private InputStream puzzleInput() {
-        return getClass().getResourceAsStream("/three.txt");
+        System.out.println(Three.computePartTwo(Inputs.puzzleInput("three.txt")));
     }
 }
