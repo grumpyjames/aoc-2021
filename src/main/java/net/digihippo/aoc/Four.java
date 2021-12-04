@@ -55,6 +55,7 @@ public class Four {
         }
     }
 
+    @SuppressWarnings("SameParameterValue")
     private static boolean[][] alloc(int width, int depth, boolean value)
     {
         boolean[][] result = new boolean[depth][];
@@ -93,10 +94,8 @@ public class Four {
         }
 
         private boolean columnAllMarked(int columnIndex) {
-            for (int i = 0; i < marked.length; i++) {
-                boolean[] marks = marked[i];
-                if (!marks[columnIndex])
-                {
+            for (boolean[] marks : marked) {
+                if (!marks[columnIndex]) {
                     return false;
                 }
             }
@@ -131,16 +130,7 @@ public class Four {
         }
     }
 
-    private static final class Game
-    {
-        private final int[] drawOrder;
-        private final List<Board> boards;
-
-        private Game(int[] drawOrder, List<Board> boards) {
-            this.drawOrder = drawOrder;
-            this.boards = boards;
-        }
-
+    private record Game(int[] drawOrder, List<Board> boards) {
         public int playUntilRowComplete() {
             for (int drawn : drawOrder) {
                 for (Board board : boards) {
@@ -162,8 +152,7 @@ public class Four {
                         boardCount--;
                         iter.remove();
 
-                        if (boardCount == 0)
-                        {
+                        if (boardCount == 0) {
                             return drawn * board.unmarked();
                         }
                     }
@@ -172,5 +161,4 @@ public class Four {
             throw new IllegalStateException();
         }
     }
-
 }
