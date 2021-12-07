@@ -39,9 +39,16 @@ public class Seven
             for (int position : crabPositions) {
                 thisCost += cf.cost(i, position);
             }
-            fuelCost = Math.min(thisCost, fuelCost);
+            if (i > 0 && thisCost > fuelCost)
+            {
+                return fuelCost;
+            }
+            else
+            {
+                fuelCost = thisCost;
+            }
         }
-        return fuelCost;
+        throw new IllegalStateException();
     }
 
     private static int moveCost(int i, int position) {
