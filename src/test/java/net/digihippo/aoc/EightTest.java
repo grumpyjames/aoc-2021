@@ -3,8 +3,8 @@ package net.digihippo.aoc;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.util.function.Consumer;
 
-import static net.digihippo.aoc.Permutations.permutationsPlease;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -31,7 +31,19 @@ class EightTest
     void permutations()
     {
         final int[][] expected = {new int[]{0, 1}, new int[]{1, 0}};
-        final int[][] actual = permutationsPlease(new int[]{0, 1});
+        final int[][] actual = new int[2][];
+        Permutations.permutations(
+                new int[]{0, 1},
+                new Consumer<>() {
+                    int index = 0;
+
+                    @Override
+                    public void accept(int[] ints) {
+                        actual[index] = new int[ints.length];
+                        System.arraycopy(ints, 0, actual[index], 0, ints.length);
+                        ++index;
+                    }
+                });
 
         assertArrayEquals(
                 expected,

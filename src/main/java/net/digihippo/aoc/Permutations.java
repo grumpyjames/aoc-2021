@@ -4,29 +4,8 @@ import java.util.function.Consumer;
 
 public final class Permutations
 {
-    static int[][] permutationsPlease(int[] input) {
-        final int[][] actual = new int[factorial(input.length)][];
-        genAllRecursive(input.length, input, new Consumer<>() {
-            int index = 0;
-
-            @Override
-            public void accept(int[] ints) {
-                final int[] copy = new int[ints.length];
-                System.arraycopy(ints, 0, copy, 0, ints.length);
-                actual[index] = copy;
-                index++;
-            }
-        });
-        return actual;
-    }
-
-    private static int factorial(int i)
-    {
-        if (i == 0)
-        {
-            return 1;
-        }
-        return i * factorial(i - 1);
+    static void permutations(int[] input, Consumer<int[]> consumer) {
+        genAllRecursive(input.length, input, consumer);
     }
 
     private static void genAllRecursive(
@@ -52,5 +31,4 @@ public final class Permutations
         input[a] = input[b];
         input[b] = tmp;
     }
-
 }

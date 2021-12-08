@@ -3,6 +3,7 @@ package net.digihippo.aoc;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public class Eight
@@ -229,14 +230,14 @@ public class Eight
     }
 
     static void collectPermutations(PermutationCollector pc, Rail... rails) {
-        for (int[] perm : perms(rails.length)) {
+        perms(rails.length, perm -> {
             pc.onItemStart();
             for (int i = 0; i < perm.length; i++) {
                 int index = perm[i];
                 pc.onItem(index, rails[i]);
             }
             pc.onItemComplete();
-        }
+        });
     }
 
     static List<Map<Character, Rail>> allPossibleArrangements() {
@@ -245,12 +246,12 @@ public class Eight
         return result;
     }
 
-    private static int[][] perms(int length) {
+    private static void perms(int length, Consumer<int[]> consumer) {
         int[] ints = new int[length];
         for (int i = 0; i < ints.length; i++) {
             ints[i] = i;
         }
-        return Permutations.permutationsPlease(ints);
+        Permutations.permutations(ints, consumer);
     }
 
     private static List<IO> parse(InputStream stream) throws IOException {
