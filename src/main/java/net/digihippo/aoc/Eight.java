@@ -165,21 +165,28 @@ public class Eight
         }
 
         public Constraint constraint() {
-
             if (active.length() == 2)
             {
-                return permutations(active, Rail.Right_Top, Rail.Right_Bottom);
+                return constrain(Rail.Right_Top, Rail.Right_Bottom);
             }
             else if (active.length() == 3)
             {
-                return permutations(active, Rail.Top, Rail.Right_Top, Rail.Right_Bottom);
+                return constrain(Rail.Top, Rail.Right_Top, Rail.Right_Bottom);
             }
             else if (active.length() == 4)
             {
-                return permutations(active, Rail.Left_Top, Rail.Right_Top, Rail.Middle, Rail.Right_Bottom);
+                return constrain(Rail.Left_Top, Rail.Right_Top, Rail.Middle, Rail.Right_Bottom);
             }
 
+            // the 'eight' structure tells you nothing, because _everything_ is on.
+
             return new None();
+        }
+
+        private OneOf constrain(Rail... rails) {
+            final List<Constraint> constraints = new ArrayList<>();
+            collectPermutations(new ConstraintCollector(active, constraints), rails);
+            return new OneOf(constraints);
         }
 
         public int interpret(Map<Character, Rail> map) {
@@ -207,39 +214,34 @@ public class Eight
         }
     }
 
-    static Constraint permutations(String expr, Rail... rails) {
-        assert (expr.length() == rails.length);
-        final List<Constraint> result = new ArrayList<>();
-        for (int[] perm : perms(expr)) {
-            final List<Constraint> constraints = new ArrayList<>(perm.length);
+    interface PermutationCollector
+    {
+        void onItemStart();
+
+        void onItem(int index, Rail rail);
+
+        void onItemComplete();
+    }
+
+    static void collectPermutations(PermutationCollector pc, Rail... rails) {
+        for (int[] perm : perms(rails.length)) {
+            pc.onItemStart();
             for (int i = 0; i < perm.length; i++) {
                 int index = perm[i];
-                constraints.add(new Must(expr.charAt(index), rails[i]));
+                pc.onItem(index, rails[i]);
             }
-            result.add(new And(constraints));
+            pc.onItemComplete();
         }
-
-        return new OneOf(result);
     }
 
     static List<Map<Character, Rail>> allPossibleArrangements() {
-        final String chars = "abcdefg";
-        final Rail[] rails = Rail.values();
         final List<Map<Character, Rail>> result = new ArrayList<>();
-        for (int[] perm : perms(chars)) {
-            final Map<Character, Rail> assignments = new HashMap<>();
-            for (int i = 0; i < perm.length; i++) {
-                int index = perm[i];
-                assignments.put(chars.charAt(index), rails[i]);
-            }
-            result.add(assignments);
-        }
-
+        collectPermutations(new MapCollector("abcdefg", result), Rail.values());
         return result;
     }
 
-    private static int[][] perms(String expr) {
-        int[] ints = new int[expr.length()];
+    private static int[][] perms(int length) {
+        int[] ints = new int[length];
         for (int i = 0; i < ints.length; i++) {
             ints[i] = i;
         }
@@ -261,5 +263,57 @@ public class Eight
                 .map(String::trim)
                 .map(Note::new)
                 .collect(Collectors.toList());
+    }
+
+    private static final class MapCollector implements PermutationCollector {
+        private final String chars;
+        private final List<Map<Character, Rail>> result;
+        private Map<Character, Rail> building;
+
+        public MapCollector(String chars, List<Map<Character, Rail>> result) {
+            this.chars = chars;
+            this.result = result;
+        }
+
+        @Override
+        public void onItemStart() {
+            this.building = new HashMap<>();
+        }
+
+        @Override
+        public void onItem(int index, Rail rail) {
+            this.building.put(chars.charAt(index), rail);
+        }
+
+        @Override
+        public void onItemComplete() {
+            result.add(building);
+        }
+    }
+
+    private static class ConstraintCollector implements PermutationCollector {
+        private final String active;
+        private final List<Constraint> constraints;
+        private ArrayList<Constraint> building;
+
+        public ConstraintCollector(final String active, List<Constraint> constraints) {
+            this.active = active;
+            this.constraints = constraints;
+        }
+
+        @Override
+        public void onItemStart() {
+            this.building = new ArrayList<>();
+        }
+
+        @Override
+        public void onItem(int index, Rail rail) {
+            building.add(new Must(active.charAt(index), rail));
+        }
+
+        @Override
+        public void onItemComplete() {
+            constraints.add(new And(building));
+        }
     }
 }
