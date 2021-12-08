@@ -14,7 +14,7 @@ public class Eight
                 .stream()
                 .map(io -> io.output)
                 .flatMap(Collection::stream)
-                .filter(Note::isOneFourSevenOrEight)
+                .filter(Digit::isOneFourSevenOrEight)
                 .count();
     }
 
@@ -112,7 +112,7 @@ public class Eight
         }
     }
 
-    record IO(List<Note> input, List<Note> output)
+    record IO(List<Digit> input, List<Digit> output)
     {
         public Map<Character, Rail> chooseFirst(List<Map<Character, Rail>> possibilities) {
             return possibilities
@@ -134,7 +134,7 @@ public class Eight
             final List<Constraint> noteConstraints =
                     input
                             .stream()
-                            .map(Note::constraint)
+                            .map(Digit::constraint)
                             .collect(Collectors.toList());
             return new And(noteConstraints);
         }
@@ -151,14 +151,14 @@ public class Eight
             int result = 0;
             for (int i = 0; i < 4; i++) {
                 int powerOfTen = 3 - i;
-                Note note = output.get(i);
+                Digit note = output.get(i);
                 result += (Math.pow(10, powerOfTen) * note.interpret(map));
             }
             return result;
         }
     }
 
-    record Note(String active)
+    record Digit(String active)
     {
         boolean isOneFourSevenOrEight()
         {
@@ -261,12 +261,12 @@ public class Eight
         });
     }
 
-    private static List<Note> toNotes(String s)
+    private static List<Digit> toNotes(String s)
     {
         return Arrays
                 .stream(s.trim().split(" "))
                 .map(String::trim)
-                .map(Note::new)
+                .map(Digit::new)
                 .collect(Collectors.toList());
     }
 
