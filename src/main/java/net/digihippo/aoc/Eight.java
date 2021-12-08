@@ -114,14 +114,6 @@ public class Eight
 
     record IO(List<Note> input, List<Note> output)
     {
-        Constraint constraint()
-        {
-            return new And(input
-                    .stream()
-                    .map(Note::constraint)
-                    .collect(Collectors.toList()));
-        }
-
         public Map<Character, Rail> chooseFirst(List<Map<Character, Rail>> possibilities) {
             return possibilities
                     .stream()
@@ -132,7 +124,19 @@ public class Eight
 
         public int interpret(List<Map<Character, Rail>> possibilities)
         {
+            // A better solver might be able to plot a route through
+            // the possibilities that's more efficient than this?
             return interpret(chooseFirst(possibilities));
+        }
+
+        private Constraint constraint()
+        {
+            final List<Constraint> noteConstraints =
+                    input
+                            .stream()
+                            .map(Note::constraint)
+                            .collect(Collectors.toList());
+            return new And(noteConstraints);
         }
 
         private boolean satisfied(Map<Character, Rail> m, Constraint constraint) {
@@ -165,6 +169,7 @@ public class Eight
         }
 
         public Constraint constraint() {
+            // Technically this repeats some information from MAPPING, I suppose.
             if (active.length() == 2)
             {
                 return constrain(Rail.Right_Top, Rail.Right_Bottom);
