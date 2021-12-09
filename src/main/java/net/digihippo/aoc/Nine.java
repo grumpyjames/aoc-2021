@@ -50,6 +50,7 @@ public class Nine {
         }
     }
 
+    @SuppressWarnings("SameParameterValue")
     private static int access(int[][] heatmap, int y, int x, int def) {
         if (0 <= y && y < heatmap.length)
         {
@@ -93,7 +94,7 @@ public class Nine {
 
     private static class BasinSizeComputer implements LowConsumer {
         private final int[][] heatmap;
-        private final List<Set<Point>> basins = new ArrayList<>();
+        private final List<List<Point>> basins = new ArrayList<>();
 
         private BasinSizeComputer(int[][] heatmap) {
             this.heatmap = heatmap;
@@ -102,41 +103,41 @@ public class Nine {
         @Override
         public void onLow(int y, int x) {
             final Queue<Point> searchSpace = new ArrayDeque<>();
+            HashSet<Point> queued = new HashSet<>();
             searchSpace.add(new Point(y, x));
+            queued.add(new Point(y, x));
 
-            seekBasin(searchSpace);
+            seekBasin(searchSpace, queued);
         }
 
-        private void seekBasin(Queue<Point> queue) {
+        private void seekBasin(Queue<Point> queue, Set<Point> queued) {
             Point p;
-            // How do we manage to repeat ourselves here?
-            Set<Point> basin = new HashSet<>();
-            Set<Point> visited = new HashSet<>();
+            List<Point> basin = new ArrayList<>();
             while ((p = queue.poll()) != null)
             {
                 int heat = access(heatmap, p.y, p.x, Integer.MAX_VALUE);
                 if (heat != 9 && heat != Integer.MAX_VALUE)
                 {
                     basin.add(p);
-                    maybeQueue(queue, visited, new Point(p.y + 1, p.x));
-                    maybeQueue(queue, visited, new Point(p.y - 1, p.x));
-                    maybeQueue(queue, visited, new Point(p.y, p.x + 1));
-                    maybeQueue(queue, visited, new Point(p.y, p.x - 1));
+                    maybeQueue(queue, queued, new Point(p.y + 1, p.x));
+                    maybeQueue(queue, queued, new Point(p.y - 1, p.x));
+                    maybeQueue(queue, queued, new Point(p.y, p.x + 1));
+                    maybeQueue(queue, queued, new Point(p.y, p.x - 1));
                 }
             }
             basins.add(basin);
         }
 
-        private void maybeQueue(Queue<Point> queue, Set<Point> visited, Point p)
+        private void maybeQueue(Queue<Point> queue, Set<Point> queued, Point p)
         {
-            if (visited.add(p)) {
+            if (queued.add(p)) {
                 queue.add(p);
             }
         }
 
         public int computeResult() {
-            Comparator<Set<Point>> comp =
-                    Comparator.comparingInt((ToIntFunction<Set<Point>>) Set::size).reversed();
+            Comparator<List<Point>> comp =
+                    Comparator.comparingInt((ToIntFunction<List<Point>>) List::size).reversed();
             basins.sort(comp);
 
             return basins.get(0).size() * basins.get(1).size() * basins.get(2).size();
