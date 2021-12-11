@@ -7,11 +7,11 @@ import java.util.function.ToIntFunction;
 
 public class Nine {
     public static int riskLevel(InputStream stream) throws IOException {
-        return riskLevel(parse(stream));
+        return riskLevel(TwoDArrays.parse(stream));
     }
 
     public static int basinSize(InputStream stream) throws IOException {
-        return basinSize(parse(stream));
+        return basinSize(TwoDArrays.parse(stream));
     }
 
     private static int riskLevel(int[][] heatmap) {
@@ -60,17 +60,6 @@ public class Nine {
             }
         }
         return def;
-    }
-
-    private static int[][] parse(InputStream stream) throws IOException {
-        return Lines.parseLines(stream, line -> {
-            int[] result = new int[line.length()];
-            for (int i = 0; i < line.length(); i++) {
-                char c = line.charAt(i);
-                result[i] = c - '0';
-            }
-            return result;
-        }).toArray(new int[][]{});
     }
 
     private static class RiskLevelComputer implements LowConsumer {
