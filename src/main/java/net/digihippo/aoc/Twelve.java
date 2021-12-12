@@ -66,6 +66,9 @@ public class Twelve {
         });
     }
 
+    // FIXME:
+    //  stop 'end' being special
+    //  we're accruing state in pathSoFar and conditions
     private static void backTrack(
             String next,
             HandyPath pathSoFar,
