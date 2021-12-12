@@ -69,22 +69,22 @@ class TwelveTest {
 
     @Test
     void examplePartTwo() throws IOException {
-        assertEquals(36, Twelve.pathCountUgh(Inputs.asInputStream(inputOne)));
+        assertEquals(36, Twelve.pathCountCaveObsession(Inputs.asInputStream(inputOne)));
     }
 
     @Test
     void examplePartTwoA() throws IOException {
-        assertEquals(103, Twelve.pathCountUgh(Inputs.asInputStream(inputOneA)));
+        assertEquals(103, Twelve.pathCountCaveObsession(Inputs.asInputStream(inputOneA)));
     }
 
     @Test
     void examplePartTwoB() throws IOException {
-        assertEquals(3509, Twelve.pathCountUgh(Inputs.asInputStream(inputOneB)));
+        assertEquals(3509, Twelve.pathCountCaveObsession(Inputs.asInputStream(inputOneB)));
     }
 
     @Test
     void partTwo() throws IOException {
         System.out.println(
-                Twelve.pathCountUgh(Inputs.puzzleInput("twelve.txt")));
+                Twelve.pathCountCaveObsession(Inputs.puzzleInput("twelve.txt")));
     }
 }

@@ -6,7 +6,7 @@ import java.util.*;
 import java.util.function.Supplier;
 
 public class Twelve {
-    public static int pathCountUgh(InputStream stream) throws IOException {
+    public static int pathCountCaveObsession(InputStream stream) throws IOException {
         final Map<String, List<Path>> directedEdges = direct(readPaths(stream));
 
         final List<HandyPath> interestingPaths =
@@ -31,17 +31,17 @@ public class Twelve {
             Supplier<ChangeableVisitConditions> s) {
         final List<HandyPath> interestingPaths = new ArrayList<>();
         final String end = "end";
-        List<Path> backPaths = directedEdges.get("end");
+        List<Path> backPaths = directedEdges.get(end);
 
         for (Path p : backPaths) {
             HandyPath hp = new Node(end, new Empty());
-            ChangeableVisitConditions conditions = s.get();
             backTrack(
-                    p,
+                    p.end,
                     hp,
                     directedEdges,
-                    interestingPaths,
-                    conditions);
+                    s.get(),
+                    interestingPaths
+            );
         }
         return interestingPaths;
     }
@@ -67,30 +67,30 @@ public class Twelve {
     }
 
     private static void backTrack(
-            Path p,
-            HandyPath bread,
+            String next,
+            HandyPath pathSoFar,
             Map<String, List<Path>> directedEdges,
-            List<HandyPath> interestingPaths,
-            ChangeableVisitConditions conditions) {
-        String travellingTo = p.end;
-        if (travellingTo.equals("start")) {
-            HandyPath newPath = bread.add(travellingTo);
+            ChangeableVisitConditions conditions,
+            List<HandyPath> interestingPaths) {
+        if (next.equals("start")) {
+            HandyPath newPath = pathSoFar.add(next);
             interestingPaths.add(newPath);
         }
         else
         {
-            Allowed allowed = conditions.performVisitationCheck(travellingTo);
+            Allowed allowed = conditions.performVisitationCheck(next);
             if (allowed.allowed)
             {
-                List<Path> away = directedEdges.get(travellingTo);
+                List<Path> away = directedEdges.get(next);
                 for (Path path : away) {
-                    HandyPath newPath = bread.add(travellingTo);
+                    HandyPath newPath = pathSoFar.add(next);
                     backTrack(
-                            path,
+                            path.end,
                             newPath,
                             directedEdges,
-                            interestingPaths,
-                            allowed.newConditions);
+                            allowed.newConditions,
+                            interestingPaths
+                    );
                 }
             }
         }
