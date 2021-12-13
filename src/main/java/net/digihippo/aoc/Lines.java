@@ -21,6 +21,24 @@ final class Lines
         }
     }
 
+    interface Parser<T>
+    {
+        void onLine(String string);
+        T build();
+    }
+
+
+    static <T> T parseLines(InputStream inputStream, Parser<T> callback) throws IOException {
+        try (final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream))) {
+            String line;
+            while ((line = bufferedReader.readLine()) != null) {
+                callback.onLine(line);
+            }
+        }
+
+        return callback.build();
+    }
+
     static <T> List<T> parseLines(InputStream inputStream, Function<String, T> callback) throws IOException {
         final List<T> result = new ArrayList<>();
         try (final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream))) {
