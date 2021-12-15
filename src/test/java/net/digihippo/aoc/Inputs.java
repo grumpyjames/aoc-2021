@@ -6,7 +6,7 @@ import java.nio.charset.StandardCharsets;
 
 final class Inputs
 {
-    static ByteArrayInputStream asInputStream(String input) {
+    static InputStream asInputStream(String input) {
         return new ByteArrayInputStream(input.getBytes(StandardCharsets.UTF_8));
     }
 
