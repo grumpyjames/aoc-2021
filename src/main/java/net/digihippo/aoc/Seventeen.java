@@ -68,7 +68,7 @@ public class Seventeen {
     public static int maxHeight(InputStream stream) throws IOException {
         final Bounds bounds = Lines.parseLine(stream, Seventeen::parseBounds);
 
-        return height(-bounds.y.low - 1);
+        return oneToNSum(-bounds.y.low - 1);
     }
 
     private static Bounds parseBounds(String line) {
@@ -90,13 +90,7 @@ public class Seventeen {
 
     public static int minX(int targetLow, int targetHigh) {
         for (int x = 0; x < targetHigh; x++) {
-            int speed = x;
-            int distance = 0;
-            while (speed > 0)
-            {
-                distance += speed;
-                --speed;
-            }
+            int distance = oneToNSum(x);
             if (targetLow <= distance && distance <= targetHigh)
             {
                 return x;
@@ -105,8 +99,8 @@ public class Seventeen {
         throw new UnsupportedOperationException();
     }
 
-    public static int height(int maxY) {
-        final double m = (maxY + 1) / 2D;
-        return (int) (maxY * m);
+    public static int oneToNSum(int n) {
+        final double m = (n + 1) / 2D;
+        return (int) (n * m);
     }
 }
