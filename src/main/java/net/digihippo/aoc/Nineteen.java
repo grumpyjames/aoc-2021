@@ -2,7 +2,6 @@ package net.digihippo.aoc;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintStream;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -11,9 +10,7 @@ import java.util.stream.Stream;
 public class Nineteen {
     public static List<Matrix> findOrientationChange(Point alternative, Point original) {
 
-        return ROTATORS.stream().filter(r -> {
-            return r.apply(alternative).equals(original) || r.apply(alternative).equals(original.reversed());
-        }).toList();
+        return ROTATORS.stream().filter(r -> r.apply(alternative).equals(original) || r.apply(alternative).equals(original.reversed())).toList();
     }
 
     static List<Matrix> ROTATORS = List.of(
@@ -118,6 +115,45 @@ public class Nineteen {
                     1	0	0""")
     );
 
+    public static int beacons(int commonBeacons, InputStream stream) throws IOException {
+        List<Scanner> scanners = Lines.parseLines(stream, new ScannerParser());
+
+        Map<String, List<Source>> source = scannerMap(commonBeacons, scanners);
+
+        Set<Point> beacons = computeUniqueBeacons(scanners, source);
+
+        return beacons.size();
+    }
+
+    public static int largestScannerDistance(int commonBeacons, InputStream stream) throws IOException {
+        List<Scanner> scanners = Lines.parseLines(stream, new ScannerParser());
+
+        Map<String, List<Source>> source = scannerMap(commonBeacons, scanners);
+
+        final List<Point> trueScanners = new ArrayList<>();
+        trueScanners.add(new Point(0, 0, 0));
+        for (int i = 1; i < scanners.size(); i++) {
+            Scanner initial = scanners.get(i);
+            List<Source> route = findRoute(initial.name(), scanners.get(0).name, source, new HashSet<>());
+            Point p = new Point(0, 0, 0);
+            assert route != null;
+            for (Source s: route) {
+                p = s.t.transform(p);
+            }
+
+            trueScanners.add(p);
+        }
+
+        int max = Integer.MIN_VALUE;
+        for (int i = 0; i < trueScanners.size(); i++) {
+            for (Point trueScanner : trueScanners) {
+                max = Math.max(trueScanners.get(i).manhattanDistance(trueScanner), max);
+            }
+        }
+
+        return max;
+    }
+
     record Matrix(int[][] parts)
     {
         public Point apply(Point p) {
@@ -221,14 +257,12 @@ public class Nineteen {
             return new Point(x + offset.x, y + offset.y, z + offset.z);
         }
 
-        public void print(PrintStream p)
-        {
-            p.print(x);
-            p.print(',');
-            p.print(y);
-            p.print(',');
-            p.print(z);
-            p.println();
+        public int manhattanDistance(Point point) {
+
+            return
+                    (Math.max(point.x, x) - Math.min(point.x, x)) +
+                    (Math.max(point.y, y) - Math.min(point.y, y)) +
+                    (Math.max(point.z, z) - Math.min(point.z, z));
         }
     }
 
@@ -281,10 +315,25 @@ public class Nineteen {
         }
     }
 
+    private static Set<Point> computeUniqueBeacons(List<Scanner> scanners, Map<String, List<Source>> source) {
+        final List<Scanner> shifted = new ArrayList<>();
+        shifted.add(scanners.get(0));
+        for (int i = 1; i < scanners.size(); i++) {
+            Scanner initial = scanners.get(i);
+            // try to get back to root scanner;
+            List<Source> route = findRoute(initial.name(), scanners.get(0).name, source, new HashSet<>());
+            assert route != null;
+            for (Source src : route) {
+                initial = initial.applyTransform(src.t);
+            }
 
-    public static int beacons(int commonBeacons, InputStream stream) throws IOException {
-        List<Scanner> scanners = Lines.parseLines(stream, new ScannerParser());
+            shifted.add(initial);
+        }
 
+        return shifted.stream().flatMap(s -> s.observations.stream()).collect(Collectors.toSet());
+    }
+
+    private static Map<String, List<Source>> scannerMap(int commonBeacons, List<Scanner> scanners) {
         Map<String, List<Source>> source = new HashMap<>();
         for (int i = 0; i < scanners.size(); i++) {
             final Scanner alternateBasisScanner = scanners.get(i);
@@ -318,28 +367,7 @@ public class Nineteen {
                 }
             }
         }
-
-        final List<Scanner> shifted = new ArrayList<>();
-        shifted.add(scanners.get(0));
-        for (int i = 1; i < scanners.size(); i++) {
-            Scanner initial = scanners.get(i);
-            // try to get back to root scanner;
-            List<Source> route = findRoute(initial.name(), scanners.get(0).name, source, new HashSet<>());
-            assert route != null;
-            for (Source src : route) {
-                initial = initial.applyTransform(src.t);
-            }
-
-            shifted.add(initial);
-        }
-
-        Set<Point> beacons = shifted.stream().flatMap(s -> s.observations.stream()).collect(Collectors.toSet());
-
-        beacons.stream()
-                .sorted(Comparator.comparingInt((Point p) -> p.x).thenComparingInt((Point p) -> p.y).thenComparingInt((Point p) -> p.z))
-                .forEach(p -> p.print(System.out));
-
-        return beacons.size();
+        return source;
     }
 
     private static void assertMaps(ScannerOffsetGuess guess, Set<Point> fromPoints, Set<Point> toPoints) {
