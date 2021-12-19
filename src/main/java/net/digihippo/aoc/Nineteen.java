@@ -12,7 +12,7 @@ public class Nineteen {
     public static List<Matrix> findOrientationChange(Point alternative, Point original) {
 
         return ROTATORS.stream().filter(r -> {
-            return r.apply(alternative).equals(original); // || r.apply(original).equals(alternative.reversed());
+            return r.apply(alternative).equals(original) || r.apply(alternative).equals(original.reversed());
         }).toList();
     }
 
