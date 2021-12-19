@@ -4,14 +4,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class Nineteen {
-    public static List<Matrix> findOrientationChange(Point dvOne, Point dvTwo) {
+    public static List<Matrix> findOrientationChange(Point alternative, Point original) {
 
         return ROTATORS.stream().filter(r -> {
-            return r.apply(dvTwo).equals(dvOne) || r.apply(dvTwo).equals(dvOne.reversed());
+            return r.apply(alternative).equals(original); // || r.apply(original).equals(alternative.reversed());
         }).toList();
     }
 
@@ -259,9 +260,12 @@ public class Nineteen {
             }
         }
 
-        public Scanner applyTransform(Matrix orientationChange, Point offset) {
+        public Scanner applyTransform(Transform t) {
             final List<Point> newPoints =
-                    observations.stream().map(p -> orientationChange.apply(p).add(offset.reversed())).toList();
+                    observations
+                            .stream()
+                            .map(t::transform)
+                            .toList();
 
             return new Scanner(name, newPoints);
         }
@@ -273,12 +277,23 @@ public class Nineteen {
         }
     }
 
-    record ScannerOffsetGuess(Matrix matrix, String scannerFrom, String scannerTo, Point offset)
+    record ScannerOffsetGuess(Matrix matrix, String scannerFrom, String scannerTo, Point offset) {}
+    record Source(String scannerName, Transform t) {}
+
+    record Transform(Matrix m, Point offset, boolean offsetFirst)
     {
-
+        Point transform(Point p)
+        {
+            if (offsetFirst)
+            {
+                return m.apply(p.add(offset));
+            }
+            else
+            {
+                return offset.add(m.apply(p));
+            }
+        }
     }
-
-    record Source(String scannerName, Matrix matrix, Point offset) {}
 
 
     public static int beacons(int commonBeacons, InputStream stream) throws IOException {
@@ -286,30 +301,33 @@ public class Nineteen {
 
         Map<String, List<Source>> source = new HashMap<>();
         for (int i = 0; i < scanners.size(); i++) {
-            final Scanner fromScanner = scanners.get(i);
+            final Scanner alternateBasisScanner = scanners.get(i);
             for (int j = i + 1; j < scanners.size(); j++) {
-                final Scanner toScanner = scanners.get(j);
+                final Scanner knownBasisScanner = scanners.get(j);
 
                 final Map<Long, List<Observation>> distanceToObservations = new HashMap<>();
-                fromScanner.visit(distanceToObservations);
-                toScanner.visit(distanceToObservations);
+                alternateBasisScanner.visit(distanceToObservations);
+                knownBasisScanner.visit(distanceToObservations);
 
                 List<Map.Entry<Long, List<Observation>>> pairs =
                         distanceToObservations.entrySet().stream().filter(e -> e.getValue().size() == 2).toList();
 
-                final Optional<Map.Entry<ScannerOffsetGuess, List<ObservationPair>>> e = computeOffsetGuess(pairs);
+                final Optional<Map.Entry<ScannerOffsetGuess, List<ObservationPair>>> e =
+                        computeOffsetGuess(pairs);
                 if (e.isPresent()) {
                     Map.Entry<ScannerOffsetGuess, List<ObservationPair>> scannerOffsetGuessLongEntry = e.get();
 
-                    Set<Point> points = beaconSet(scannerOffsetGuessLongEntry);
-                    if (points.size() >= commonBeacons) {
+                    Set<Point> inAlternativeBasis = beaconSet(scannerOffsetGuessLongEntry, o -> o.a);
+                    Set<Point> inGoodBasis = beaconSet(scannerOffsetGuessLongEntry, o -> o.b);
+                    assertMaps(scannerOffsetGuessLongEntry.getKey(), inAlternativeBasis, inGoodBasis);
+                    if (inAlternativeBasis.size() >= commonBeacons) {
 
                         ScannerOffsetGuess guess = scannerOffsetGuessLongEntry.getKey();
 
-                        source.computeIfAbsent(toScanner.name, k -> new ArrayList<>())
-                                .add(new Source(fromScanner.name, guess.matrix, guess.offset));
-                        source.computeIfAbsent(fromScanner.name, k -> new ArrayList<>())
-                                .add(new Source(toScanner.name, guess.matrix.invert(), guess.offset.reversed()));
+                        source.computeIfAbsent(alternateBasisScanner.name, k -> new ArrayList<>())
+                                .add(new Source(knownBasisScanner.name, new Transform(guess.matrix, guess.offset, false)));
+                        source.computeIfAbsent(knownBasisScanner.name, k -> new ArrayList<>())
+                                .add(new Source(alternateBasisScanner.name, new Transform(guess.matrix.invert(), guess.offset.reversed(), true)));
                     }
                 }
             }
@@ -322,9 +340,10 @@ public class Nineteen {
             // try to get back to root scanner;
             List<Source> route = findRoute(initial.name(), scanners.get(0).name, source, new HashSet<>());
             System.out.println(initial.name);
+            assert route != null;
             for (Source src : route) {
-                System.out.println(src.offset);
-                initial = initial.applyTransform(src.matrix, src.offset);
+                System.out.println(src.t);
+                initial = initial.applyTransform(src.t);
             }
 
             shifted.add(initial);
@@ -337,10 +356,28 @@ public class Nineteen {
         return beacons.size();
     }
 
-    private static Set<Point> beaconSet(Map.Entry<ScannerOffsetGuess, List<ObservationPair>> scannerOffsetGuessLongEntry) {
+    private static void assertMaps(ScannerOffsetGuess guess, Set<Point> fromPoints, Set<Point> toPoints) {
+        for (Point aPoint : fromPoints) {
+            Point rotated = guess.matrix.apply(aPoint);
+            Point offset = rotated.add(guess.offset);
+            boolean contains = toPoints.contains(offset);
+            assert contains;
+        }
+
+        for (Point bPoint : toPoints) {
+            Point offset = bPoint.add(guess.offset.reversed());
+            Point rotated = guess.matrix.invert().apply(offset);
+            boolean contains = fromPoints.contains(rotated);
+            assert contains;
+        }
+    }
+
+    private static Set<Point> beaconSet(
+            Map.Entry<ScannerOffsetGuess, List<ObservationPair>> scannerOffsetGuessLongEntry,
+            Function<ObservationPair, Observation> extr) {
         return scannerOffsetGuessLongEntry.getValue()
                 .stream()
-                .map(o -> o.a)
+                .map(extr)
                 .flatMap(a -> Stream.of(a.one, a.two))
                 .collect(Collectors.toSet());
     }
@@ -385,26 +422,29 @@ public class Nineteen {
                 continue;
             }
 
-            Observation a = entry.get(0);
-            Observation b = entry.get(1);
-            List<Matrix> orientationChanges = findOrientationChange(a.directionVector(), b.directionVector());
+            Observation alternative = entry.get(0);
+            Observation original = entry.get(1);
+            List<Matrix> orientationChanges = findOrientationChange(alternative.directionVector(), original.directionVector());
             for (Matrix orientationChange: orientationChanges) {
-                Point aTwoFromAOne = a.two.directionFrom(a.one);
-                Point bTwoReoriented = orientationChange.apply(b.two);
-                Point bOneReoriented = orientationChange.apply(b.one);
-                Point bTwoFromBOne = bTwoReoriented.directionFrom(bOneReoriented);
+                Point reorientedAOne = orientationChange.apply(alternative.one);
+                Point reorientedATwo = orientationChange.apply(alternative.two);
 
-                if (aTwoFromAOne.equals(bTwoFromBOne))
+                Point offsetOne = original.two.directionFrom(reorientedATwo);
+                Point offsetTwo = original.one.directionFrom(reorientedAOne);
+
+                Point swappedOffsetOne = original.two.directionFrom(reorientedAOne);
+                Point swappedOffsetTwo = original.one.directionFrom(reorientedATwo);
+
+                if (offsetOne.equals(offsetTwo))
                 {
-                    Point scannerDiff = bOneReoriented.directionFrom(a.one);
-                    ScannerOffsetGuess guess = new ScannerOffsetGuess(orientationChange, b.scannerName, a.scannerName, scannerDiff);
-                    guesses.computeIfAbsent(guess, k -> new ArrayList<>()).add(new ObservationPair(a, b));
+                    ScannerOffsetGuess guess = new ScannerOffsetGuess(orientationChange, original.scannerName, alternative.scannerName, offsetOne);
+                    guesses.computeIfAbsent(guess, k -> new ArrayList<>()).add(new ObservationPair(alternative, original));
                 }
-                else if (aTwoFromAOne.equals(bTwoFromBOne.reversed()))
+                else if (swappedOffsetOne.equals(swappedOffsetTwo))
                 {
-                    Point scannerDiff = bTwoReoriented.directionFrom(a.one);
-                    ScannerOffsetGuess guess = new ScannerOffsetGuess(orientationChange, b.scannerName, a.scannerName, scannerDiff);
-                    guesses.computeIfAbsent(guess, k -> new ArrayList<>()).add(new ObservationPair(a, b));
+                    // what does this mean? does it mean anything?
+                    ScannerOffsetGuess guess = new ScannerOffsetGuess(orientationChange, original.scannerName, alternative.scannerName, swappedOffsetOne);
+                    guesses.computeIfAbsent(guess, k -> new ArrayList<>()).add(new ObservationPair(alternative, original));
                 }
                 else
                 {
