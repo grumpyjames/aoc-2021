@@ -138,20 +138,6 @@ public class Nineteen {
             return new Matrix(inverse(parts));
         }
 
-        @Override
-        public int hashCode() {
-            return Arrays.hashCode(parts[0]) + Arrays.hashCode(parts[1]) + Arrays.hashCode(parts[2]);
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            Matrix m = (Matrix) obj;
-
-            return Arrays.equals(parts[0], m.parts[0]) &&
-                    Arrays.equals(parts[1], m.parts[1]) &&
-                    Arrays.equals(parts[2], m.parts[2]);
-        }
-
         private static int determinant(int[][] matrix) {
             if (matrix.length != matrix[0].length)
                 throw new IllegalStateException("invalid dimensions");
@@ -339,10 +325,8 @@ public class Nineteen {
             Scanner initial = scanners.get(i);
             // try to get back to root scanner;
             List<Source> route = findRoute(initial.name(), scanners.get(0).name, source, new HashSet<>());
-            System.out.println(initial.name);
             assert route != null;
             for (Source src : route) {
-                System.out.println(src.t);
                 initial = initial.applyTransform(src.t);
             }
 
@@ -351,7 +335,9 @@ public class Nineteen {
 
         Set<Point> beacons = shifted.stream().flatMap(s -> s.observations.stream()).collect(Collectors.toSet());
 
-        beacons.stream().sorted(Comparator.comparingInt((Point p) -> p.x).thenComparingInt((Point p) -> p.y).thenComparingInt((Point p) -> p.z)).forEach(p -> p.print(System.out));
+        beacons.stream()
+                .sorted(Comparator.comparingInt((Point p) -> p.x).thenComparingInt((Point p) -> p.y).thenComparingInt((Point p) -> p.z))
+                .forEach(p -> p.print(System.out));
 
         return beacons.size();
     }
