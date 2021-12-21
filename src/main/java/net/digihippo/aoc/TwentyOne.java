@@ -2,6 +2,7 @@ package net.digihippo.aoc;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -22,7 +23,7 @@ public class TwentyOne {
             playerTwoWins += frequency;
         }
 
-        public void setFrequency(int frequency) {
+        public void setFrequency(long frequency) {
             this.frequency = frequency;
         }
 
@@ -35,8 +36,8 @@ public class TwentyOne {
         }
     }
 
-    public static long partTwo(InputStream stream) throws IOException {
-        List<Player> players = parsePlayers(stream, 21);
+    public static long partTwo(InputStream stream, int winningScore) throws IOException {
+        List<Player> players = parsePlayers(stream, winningScore);
 
         int[] rollFrequencies = new int[] {1, 3, 6, 7, 6, 3, 1};
         int[] rollNumbers     = new int[] {3, 4, 5, 6, 7, 8, 9};
@@ -70,7 +71,7 @@ public class TwentyOne {
 
     private static void runGames(
             List<Player> players,
-            int frequency,
+            long frequency,
             int[] rolls,
             int[] rollNumbers,
             int[] rollFrequencies,
@@ -87,7 +88,7 @@ public class TwentyOne {
             int rollFrequency = rollFrequencies[i];
 
             newRolls[rolls.length] = rollNumber;
-            final int newFrequency = rollFrequency * frequency;
+            final long newFrequency = rollFrequency * frequency;
             gameCounter.setFrequency(newFrequency);
 
             die.reset(newRolls);
@@ -103,6 +104,10 @@ public class TwentyOne {
                         gameCounter,
                         die);
             }
+//            else
+//            {
+//                System.out.println("These rolls yield a result: " + Arrays.toString(newRolls));
+//            }
 
         }
     }

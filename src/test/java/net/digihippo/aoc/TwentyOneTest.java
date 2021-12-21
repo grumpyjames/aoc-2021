@@ -21,10 +21,23 @@ class TwentyOneTest {
     }
 
     @Test
+    void partTwoNoddy() throws IOException {
+        final String input = """
+                Player 1 starting position: 4
+                Player 2 starting position: 8""";
+        assertEquals(27, TwentyOne.partTwo(Inputs.asInputStream(input), 1));
+    }
+
+    @Test
     void partTwoExample() throws IOException {
         final String input = """
                 Player 1 starting position: 4
                 Player 2 starting position: 8""";
-        assertEquals(444356092776315L, TwentyOne.partTwo(Inputs.asInputStream(input)));
+        assertEquals(444356092776315L, TwentyOne.partTwo(Inputs.asInputStream(input), 21));
+    }
+
+    @Test
+    void partTwo() throws IOException {
+        System.out.println(TwentyOne.partTwo(Inputs.puzzleInput("twentyone.txt"), 21));
     }
 }
