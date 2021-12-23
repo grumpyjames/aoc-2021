@@ -8,7 +8,6 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TwentyThreeTest {
-
     private final String exampleOne = """
             #############
             #...........#
@@ -18,8 +17,6 @@ class TwentyThreeTest {
 
     @Test
     void burrowParse() throws IOException {
-
-
         assertEquals(
                 new TwentyThree.Burrow(
                         new String[]{"BA", "CD", "BC", "DA"},
@@ -297,7 +294,134 @@ class TwentyThreeTest {
 
     @Test
     void partOne() throws IOException {
-//        System.out.println(TwentyThree.minimumCost(Inputs.puzzleInput("twentythree.txt")));
+        System.out.println(TwentyThree.minimumCost(Inputs.puzzleInput("twentythree.txt")));
+    }
+
+    @Test
+    void unfold() throws IOException {
+        final String input = """
+                #############
+                #.....D.D...#
+                ###.#B#C#.###
+                  #A#B#C#A#
+                  #########""";
+        TwentyThree.Burrow b = TwentyThree.parse(Inputs.asInputStream(input))
+                .unfold(new String[]{ "DD", "CB", "BA", "AC" });
+
+        System.out.println(b);
+    }
+
+    @Test
+    void examplePartTwo() throws IOException {
+        assertEquals(
+                12521,
+                TwentyThree.minimumCostUnfolded(Inputs.asInputStream(exampleOne)));
+    }
+
+    @Test
+    void moreMoveChecks() throws IOException {
+        final TwentyThree.Burrow burrow = TwentyThree.extendedParse(Inputs.asInputStream("""
+                #############
+                #AA.....B.BD#
+                ###B#.#.#.###
+                  #D#C#.#.#
+                  #D#B#C#C#
+                  #A#D#C#A#
+                  #########"""));
+
+        final List<TwentyThree.Move> moves = TwentyThree.validMoves(burrow);
+
+        assertTrue(moves.contains(
+                new TwentyThree.Switch(
+                        new TwentyThree.Exit(1, 0, 'C', 6, 400),
+                        new TwentyThree.Entry(6, 'C', 2, 1, 200)
+                )
+        ));
+    }
+
+    @Test
+    void yetMoreMoveChecks() throws IOException {
+        final TwentyThree.Burrow burrow = TwentyThree.extendedParse(Inputs.asInputStream("""
+                #############
+                #AA.....B.BD#
+                ###B#.#.#.###
+                  #D#.#C#.#
+                  #D#B#C#C#
+                  #A#D#C#A#
+                  #########"""));
+
+        final List<TwentyThree.Move> moves = TwentyThree.validMoves(burrow);
+
+        final List<TwentyThree.Move> expected = List.of(
+                new TwentyThree.Exit(0, 0, 'B', 3, 20),
+                new TwentyThree.Exit(0, 0, 'B', 5, 40),
+                new TwentyThree.Exit(1, 2, 'B', 3, 40),
+                new TwentyThree.Exit(1, 2, 'B', 5, 40)
+        );
+
+        assertMovesMatch(expected, moves);
+    }
+
+    @Test
+    void yetMoreYetMoreChecks() throws IOException {
+        final TwentyThree.Burrow burrow = TwentyThree.extendedParse(Inputs.asInputStream("""
+                #############
+                #AA...B.B.BD#
+                ###B#.#.#.###
+                  #D#.#C#.#
+                  #D#.#C#C#
+                  #A#D#C#A#
+                  #########"""));
+
+        final List<TwentyThree.Move> moves = TwentyThree.validMoves(burrow);
+
+        final List<TwentyThree.Move> expected = List.of(
+                new TwentyThree.Exit(0, 0, 'B', 3, 20),
+                new TwentyThree.Exit(1, 3, 'D', 3, 5000)
+        );
+
+        assertMovesMatch(expected, moves);
+    }
+
+    @Test
+    void andMore() throws IOException {
+        final TwentyThree.Burrow burrow = TwentyThree.extendedParse(Inputs.asInputStream("""
+                #############
+                #AA.D.B.B.BD#
+                ###B#.#.#.###
+                  #D#.#C#.#
+                  #D#.#C#C#
+                  #A#.#C#A#
+                  #########"""));
+
+        final List<TwentyThree.Move> moves = TwentyThree.validMoves(burrow);
+
+        final List<TwentyThree.Move> expected = List.of(
+                new TwentyThree.Entry(5, 'B', 1, 3, 50)
+        );
+
+        assertMovesMatch(expected, moves);
+    }
+
+    @Test
+    void andStillMore() throws IOException {
+        final TwentyThree.Burrow burrow = TwentyThree.extendedParse(Inputs.asInputStream("""
+                #############
+                #...........#
+                ###B#C#B#D###
+                  #D#C#B#A#
+                  #D#B#A#C#
+                  #A#D#C#A#
+                  #########"""));
+
+        final List<TwentyThree.Move> moves = TwentyThree.validMoves(burrow);
+
+        moves.forEach(System.out::println);
+//        final List<TwentyThree.Move> expected = List.of(
+//                new TwentyThree.Entry(7, 'B', 1, 2, 60)
+//        );
+//
+//        assertMovesMatch(expected, moves);
     }
 
     private TwentyThree.Entry entry(int fromHallwayIndex, char pod, int toRoomIndex, int roomSlot, long cost) {

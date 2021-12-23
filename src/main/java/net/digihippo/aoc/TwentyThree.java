@@ -12,7 +12,7 @@ public class TwentyThree {
     }
 
     public static Burrow parse(InputStream stream) throws IOException {
-        return Lines.parseLines(stream, new BurrowParser());
+        return Lines.parseLines(stream, new BurrowParser(2));
     }
 
     public static Burrow enactMove(Burrow b, Move move) {
@@ -67,73 +67,138 @@ public class TwentyThree {
     }
 
     public static long minimumCost(InputStream stream) throws IOException {
-        final Burrow burrow = Lines.parseLines(stream, new BurrowParser());
-
-        final TreeMap<Long, Set<Burrow>> frontier = new TreeMap<>();
-        final Set<Burrow> visited = new HashSet<>();
-        final Map<Burrow, Long> costs = new HashMap<>();
-
+        final Burrow burrow = Lines.parseLines(stream, new BurrowParser(2));
         final Burrow finito = emptyHalls(new String[]{"AA", "BB", "CC", "DD"});
+
+        return minimumCost(burrow, finito);
+    }
+
+    public static long minimumCostUnfolded(InputStream stream) throws IOException {
+        Burrow burrow = Lines.parseLines(stream, new BurrowParser(2));
+
+        burrow = burrow.unfold(new String[]{ "DD", "CB", "BA", "AC" });
+
+        final Burrow finito = emptyHalls(new String[]{"AAAA", "BBBB", "CCCC", "DDDD"});
+
+        return minimumCost(burrow, finito);
+    }
+
+    public static Burrow extendedParse(InputStream stream) throws IOException {
+        return Lines.parseLines(stream, new BurrowParser(4));
+    }
+
+    record Location(long cost, Burrow burrow) {}
+
+    private static Long minimumCost(Burrow burrow, Burrow finito) {
+        final TreeMap<Long, Set<Burrow>> frontier = new TreeMap<>();
+        final Set<Burrow> visited = new HashSet<>(2 ^ 17);
+        final Map<Burrow, Long> burrowToMinCost = new HashMap<>(2 ^ 14);
+
 
         final List<Move> moves = validMoves(burrow);
         for (Move move : moves) {
             final Burrow value = enactMove(burrow, move);
             frontier.computeIfAbsent(move.cost(), k -> new HashSet<>()).add(value);
-            costs.put(value, move.cost());
+            burrowToMinCost.put(value, move.cost());
+            visited.add(burrow);
         }
 
-        Optional<Map.Entry<Long, Set<Burrow>>> maybeEntry = Optional.of(frontier.firstEntry());
+        Optional<Location> maybeEntry =
+                Optional.of(new Location(frontier.firstEntry().getKey(), frontier.firstEntry().getValue().iterator().next()));
         int routesExamined = 0;
         while (maybeEntry.isPresent()) {
-            final Map.Entry<Long, Set<Burrow>> entry = maybeEntry.get();
-            final long costSoFar = entry.getKey();
-            final Set<Burrow> nextBurrows = entry.getValue();
-            @SuppressWarnings("OptionalGetWithoutIsPresent") final Burrow nextBurrow =
-                    nextBurrows.stream().filter(b -> !visited.contains(b)).findFirst().get();
+            final Location entry = maybeEntry.get();
+            final long costSoFar = entry.cost;
+            final Burrow nextBurrow = entry.burrow;
             if (visited.add(nextBurrow)) {
+                final Set<Burrow> burrows = frontier.get(costSoFar);
+                burrows.remove(nextBurrow);
+                if (burrows.isEmpty())
+                {
+                    frontier.remove(costSoFar);
+                }
+
                 final List<Move> newMoves = validMoves(nextBurrow);
                 for (Move newMove : newMoves) {
-                    final Burrow buzza = enactMove(nextBurrow, newMove);
-                    if (buzza.equals(finito))
+                    final Burrow moveDestination = enactMove(nextBurrow, newMove);
+                    if (moveDestination.equals(finito))
                     {
+                        // could trim the frontier at this point ?
                         System.out.println("Found an ending");
                     }
                     final long newCost = costSoFar + newMove.cost();
-                    if (costs.containsKey(buzza)) {
-                        final long oldCost = costs.get(buzza);
-                        if (newCost < oldCost) {
+                    if (burrowToMinCost.containsKey(moveDestination)) {
+                        final long oldCost = burrowToMinCost.get(moveDestination);
+                        final boolean cheaper = newCost < oldCost;
+                        if (cheaper) {
                             final Set<Burrow> frontierSet = frontier.get(oldCost);
                             if (frontierSet != null) {
-                                frontierSet.remove(buzza);
-                                frontier.computeIfAbsent(newCost, k -> new HashSet<>()).add(buzza);
-                                costs.put(buzza, newCost);
+                                frontierSet.remove(moveDestination);
+                                frontier.computeIfAbsent(newCost, k -> new HashSet<>()).add(moveDestination);
+                                burrowToMinCost.put(moveDestination, newCost);
                             } else {
                                 System.out.println("Interesting");
                             }
                         }
                     } else {
-                        costs.put(buzza, newCost);
-                        frontier.computeIfAbsent(newCost, k -> new HashSet<>()).add(buzza);
+                        burrowToMinCost.put(moveDestination, newCost);
+                        frontier.computeIfAbsent(newCost, k -> new HashSet<>()).add(moveDestination);
                     }
                 }
             }
+            else
+            {
+                // huh ?
+                System.out.println("wtf");
+            }
 
-            final long minCostSoFar = costs.getOrDefault(finito, Long.MAX_VALUE);
-            maybeEntry = frontier
-                    .entrySet()
-                    .stream()
-                    .filter(e -> e.getKey() < minCostSoFar && e.getValue().stream().anyMatch(b -> !visited.contains(b)))
-                    .findFirst();
+            final long minCostSoFar = burrowToMinCost.getOrDefault(finito, Long.MAX_VALUE);
+            maybeEntry = nextEntry(frontier, visited, minCostSoFar);
+            if (maybeEntry.isPresent() && visited.contains(maybeEntry.get().burrow))
+            {
+                // what?
+                System.out.println("woaref");
+            }
 
             routesExamined++;
             if (routesExamined % 10000 == 0)
             {
                 System.out.println("Examined " + routesExamined + " routes, min cost so far is " + minCostSoFar);
+                System.out.println("Burrow was " + nextBurrow);
             }
         }
 
-        return costs.get(finito);
+        if (burrowToMinCost.containsKey(finito)) {
+            return burrowToMinCost.get(finito);
+        } else {
+            System.out.println("No route found!");
+            throw new IllegalStateException();
+        }
     }
+
+    private static Optional<Location> nextEntry(
+            TreeMap<Long, Set<Burrow>> frontier,
+            Set<Burrow> visited,
+            long minCostSoFar) {
+        for (Map.Entry<Long, Set<Burrow>> ee : frontier.entrySet()) {
+            if (ee.getKey() > minCostSoFar)
+            {
+                return Optional.empty();
+            }
+            else
+            {
+                for (Burrow b : ee.getValue()) {
+                    if (!visited.contains(b))
+                    {
+                        return Optional.of(new Location(ee.getKey(), b));
+                    }
+                }
+            }
+        }
+
+        return Optional.empty();
+    }
+
 
     sealed interface Move permits Exit, Entry, Switch {
         long cost();
@@ -152,9 +217,18 @@ public class TwentyThree {
     private static final int[] VALID_HALLWAY_POSITIONS = new int[] {0, 1, 3, 5, 7, 9, 10};
     private static final int[] HALLWAY_ADJACENTS = new int[] {2, 4, 6, 8};
 
-    static final int[] primes = new int[] {2, 3, 5, 7};
+    public static final class Burrow {
+        public final String[] corridors;
+        public final char[] hallway;
+        private final int hashCode;
 
-    record Burrow(String[] corridors, char[] hallway) {
+        Burrow(String[] corridors, char[] hallway)
+        {
+            this.corridors = corridors;
+            this.hallway = hallway;
+            this.hashCode = hash();
+        }
+
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
@@ -163,18 +237,17 @@ public class TwentyThree {
             return Arrays.equals(corridors, burrow.corridors) && Arrays.equals(hallway, burrow.hallway);
         }
 
+        public int hash()
+        {
+            int result = 1;
+            result = 31 * result + Arrays.hashCode(corridors);
+            result = 31 * result + Arrays.hashCode(hallway);
+            return result;
+        }
 
         @Override
         public int hashCode() {
-            int roomHash = 1;
-            for (int i = 0; i < corridors.length; i++) {
-                String corridor = corridors[i];
-                int prime = primes[i];
-                roomHash = roomHash * (prime * (corridor.charAt(0) - 'A'));
-                roomHash = roomHash * (prime * (corridor.charAt(1) - 'A'));
-            }
-
-            return 11 * roomHash + Arrays.hashCode(hallway);
+            return hashCode;
         }
 
         @Override
@@ -185,8 +258,14 @@ public class TwentyThree {
                     '}';
         }
 
-        public int depth() {
-            return corridors[0].length();
+        public Burrow unfold(String[] extraBits) {
+            final String[] newCorridors = new String[4];
+
+            for (int i = 0; i < newCorridors.length; i++) {
+                newCorridors[i] = corridors[i].charAt(0) + extraBits[i] + corridors[i].charAt(1);
+            }
+
+            return new Burrow(newCorridors, hallway);
         }
     }
 
@@ -212,6 +291,60 @@ public class TwentyThree {
         final List<Move> moves = new ArrayList<>();
 
         // look for entries from the hallway to the corridor.
+        seekEntries(burrow, moves);
+
+        // look for switches
+        seekSwitches(burrow, corridors, moves);
+
+        if (!moves.isEmpty())
+        {
+            return moves;
+        }
+
+        seekExits(burrow, corridors, moves);
+
+        return moves;
+    }
+
+    private static void seekExits(Burrow burrow, String[] corridors, List<Move> moves) {
+        for (char i = 0; i < corridors.length; i++) {
+            String corridor = corridors[i];
+            for (int slot = 0; slot < corridor.length(); slot++) {
+                final char pod = corridor.charAt(slot);
+                char correctPod = (char) ('A' + i);
+                if (pod != '.')
+                {
+                    // don't suggest moving stacks of the right thing.
+                    boolean allGood = true;
+                    for (int j = slot; j < corridor.length(); j++) {
+                         allGood &= corridor.charAt(j) == correctPod;
+                    }
+
+                    if (!allGood)
+                    {
+                        // suggest entries for the topmost pod.
+                        long moveCost = COSTS[pod - 'A'];
+                        for (int validHallwayPosition : VALID_HALLWAY_POSITIONS) {
+                            final int exitPoint = HALLWAY_ADJACENTS[i];
+                            if (reachable(burrow.hallway, validHallwayPosition, exitPoint)) {
+                                moves.add(new Exit(
+                                        i,
+                                        slot,
+                                        pod,
+                                        validHallwayPosition,
+                                        ((1 + slot + Math.abs(exitPoint - validHallwayPosition)) * moveCost)
+                                ));
+                            }
+                        }
+                    }
+
+                    break;
+                }
+            }
+        }
+    }
+
+    private static void seekEntries(Burrow burrow, List<Move> moves) {
         for (int i = 0; i < burrow.hallway.length; i++) {
             char c = burrow.hallway[i];
 
@@ -220,105 +353,45 @@ public class TwentyThree {
                 addEntryMoves(burrow, i, c, c - 'A', moves);
             }
         }
+    }
 
-        // look for switches
+    private static void seekSwitches(Burrow burrow, String[] corridors, List<Move> moves) {
         for (char i = 0; i < corridors.length; i++) {
             String corridor = corridors[i];
-            char top = corridor.charAt(0);
-            char bottom = corridor.charAt(1);
-
-            final int correctPod = 'A' + i;
-            if (top != '.' && top != correctPod)
-            {
-                int targetCorridorIndex = top - 'A';
-                long moveCost = COSTS[targetCorridorIndex];
-                final int newX = HALLWAY_ADJACENTS[targetCorridorIndex];
-                final int oldX = HALLWAY_ADJACENTS[i];
-                if (reachable(burrow.hallway, oldX, newX)) {
-                    final Exit exit = new Exit(i, 0, top, newX, moveCost * (1 + Math.abs(oldX - newX)));
-                    if (corridors[targetCorridorIndex].charAt(0) == '.' && corridors[targetCorridorIndex].charAt(1) == top) {
-                        moves.add(new Switch(
-                                exit,
-                                new Entry(newX, top, targetCorridorIndex, 0, moveCost)
-                        ));
+            char correctPod = (char) ('A' + i);
+            for (int slot = 0; slot < corridor.length(); slot++) {
+                final char pod = corridor.charAt(slot);
+                if (pod != '.') {
+                    if (pod != correctPod) {
+                        int targetCorridorIndex = pod - 'A';
+                        long moveCost = COSTS[targetCorridorIndex];
+                        final int newX = HALLWAY_ADJACENTS[targetCorridorIndex];
+                        final int oldX = HALLWAY_ADJACENTS[i];
+                        if (reachable(burrow.hallway, oldX, newX)) {
+                            final Exit exit = new Exit(i, 0, pod, newX, moveCost * (1 + slot + Math.abs(oldX - newX)));
+                            final String targetCorridor = corridors[targetCorridorIndex];
+                            for (int targetSlot = 0; targetSlot < targetCorridor.length(); targetSlot++) {
+                                boolean matching = true;
+                                for (int j = 0; j <= targetSlot; j++) {
+                                    matching &= targetCorridor.charAt(j) == '.';
+                                }
+                                for (int j = targetSlot + 1; j < targetCorridor.length(); j++) {
+                                    matching &= targetCorridor.charAt(j) == pod;
+                                }
+                                if (matching) {
+                                    moves.add(new Switch(
+                                            exit,
+                                            new Entry(newX, pod, targetCorridorIndex, targetSlot, (1 + targetSlot) * moveCost)
+                                    ));
+                                    break;
+                                }
+                            }
+                        }
                     }
-                    else if (corridors[targetCorridorIndex].charAt(0) == '.' && corridors[targetCorridorIndex].charAt(1) == '.') {
-                        moves.add(new Switch(
-                                exit,
-                                new Entry(newX, top, targetCorridorIndex, 1, 2 * moveCost)
-                        ));
-                    }
-                }
-            }
-
-            if (top == '.' && bottom != '.' && bottom != correctPod)
-            {
-                final int targetCorridorIndex = bottom - 'A';
-                long moveCost = COSTS[targetCorridorIndex];
-                final int newX = HALLWAY_ADJACENTS[targetCorridorIndex];
-                final int oldX = HALLWAY_ADJACENTS[i];
-                if (reachable(burrow.hallway, oldX, newX)) {
-                    if (corridors[targetCorridorIndex].charAt(0) == '.' && corridors[targetCorridorIndex].charAt(1) == bottom) {
-                        moves.add(new Switch(
-                                new Exit(i, 1, bottom, newX, moveCost * (2 + Math.abs(oldX - newX))),
-                                new Entry(newX, bottom, targetCorridorIndex, 0, moveCost)
-                        ));
-                    }
-                    else if (corridors[targetCorridorIndex].charAt(0) == '.' && corridors[targetCorridorIndex].charAt(1) == '.') {
-                        moves.add(new Switch(
-                                new Exit(i, 1, bottom, newX, moveCost * (2 + Math.abs(oldX - newX))),
-                                new Entry(newX, bottom, targetCorridorIndex, 1, 2 * moveCost)
-                        ));
-                    }
+                    break;
                 }
             }
         }
-
-        if (!moves.isEmpty())
-        {
-            return moves;
-        }
-
-        for (char i = 0; i < corridors.length; i++) {
-            String corridor = corridors[i];
-            char bottom = corridor.charAt(1);
-            char top = corridor.charAt(0);
-            //noinspection StatementWithEmptyBody
-            if (bottom == top && bottom == ('A' + i)) {
-                // already in the right state, don't move it!
-            }
-            else if (top != '.') {
-                long moveCost = COSTS[top - 'A'];
-                for (int validHallwayPosition : VALID_HALLWAY_POSITIONS) {
-                    final int exitPoint = HALLWAY_ADJACENTS[i];
-                    if (reachable(burrow.hallway, validHallwayPosition, exitPoint)) {
-                        moves.add(new Exit(
-                                i,
-                                0,
-                                top,
-                                validHallwayPosition,
-                                moveCost + (Math.abs(exitPoint - validHallwayPosition) * moveCost)
-                        ));
-                    }
-                }
-            }
-            else if (bottom != '.') {
-                long moveCost = COSTS[bottom - 'A'];
-                for (int validHallwayPosition : VALID_HALLWAY_POSITIONS) {
-                    final int exitPoint = HALLWAY_ADJACENTS[i];
-                    if (reachable(burrow.hallway, validHallwayPosition, exitPoint)) {
-                        moves.add(new Exit(
-                                i,
-                                1,
-                                bottom,
-                                validHallwayPosition,
-                                (2 * moveCost) + (Math.abs(exitPoint - validHallwayPosition) * moveCost)
-                        ));
-                    }
-                }
-            }
-        }
-        return moves;
     }
 
     private static void addEntryMoves(Burrow burrow, int i, char c, int index, List<Move> moves) {
@@ -352,7 +425,14 @@ public class TwentyThree {
     private static class BurrowParser implements Lines.Parser<Burrow> {
         int count = 0;
         char[] hallway;
-        String[] corridors = new String[4];
+        private final int corridorDepth;
+
+        BurrowParser(int corridorDepth)
+        {
+            this.corridorDepth = corridorDepth;
+        }
+
+        String[] corridors = new String[] {"", "", "", ""};
 
         @Override
         public void onLine(String string) {
@@ -360,14 +440,8 @@ public class TwentyThree {
             {
                 hallway = string.substring(1, string.length() - 1).toCharArray();
             }
-            if (count == 2)
-            {
-                for (int i = 0; i < corridors.length; i++) {
-                    corridors[i] = string.substring(3 + (2 * i), 3 + (2 * i) + 1);
-                }
-            }
 
-            if (count == 3)
+            if (2 <= count && count < 2 + corridorDepth)
             {
                 for (int i = 0; i < corridors.length; i++) {
                     corridors[i] += string.substring(3 + (2 * i), 3 + (2 * i) + 1);
