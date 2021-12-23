@@ -296,10 +296,11 @@ public class TwentyThree {
         // look for switches
         seekSwitches(burrow, corridors, moves);
 
-        if (!moves.isEmpty())
-        {
-            return moves;
-        }
+        // This, as far as I can see, out to be fine, but it breaks part two. I wonder why?
+//        if (!moves.isEmpty())
+//        {
+//            return moves;
+//        }
 
         seekExits(burrow, corridors, moves);
 

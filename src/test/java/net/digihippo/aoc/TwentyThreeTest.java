@@ -314,8 +314,15 @@ class TwentyThreeTest {
     @Test
     void examplePartTwo() throws IOException {
         assertEquals(
-                12521,
+                44169,
                 TwentyThree.minimumCostUnfolded(Inputs.asInputStream(exampleOne)));
+    }
+
+    @Test
+    void partTwo() throws IOException {
+        System.out.println(
+                TwentyThree.minimumCostUnfolded(Inputs.puzzleInput("twentythree.txt"))
+        );
     }
 
     @Test
