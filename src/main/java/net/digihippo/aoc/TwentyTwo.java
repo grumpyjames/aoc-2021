@@ -28,18 +28,6 @@ public class TwentyTwo {
     }
 
     record Bound(Point p) {
-        public Bound replaceX(int newX) {
-            return new Bound(new Point(newX, p.y, p.z));
-        }
-
-        public Bound replaceY(int newY) {
-            return new Bound(new Point(p.x, newY, p.z));
-        }
-
-        public Bound replaceZ(int newZ) {
-            return new Bound(new Point(p.x, p.y, newZ));
-        }
-
         public Bound max(Bound lower) {
             return new Bound(
                     p.max(lower.p)
@@ -58,7 +46,125 @@ public class TwentyTwo {
         return new Bounds(on, lower, upper, new ArrayList<>());
     }
 
-    record Bounds(boolean on, Bound lower, Bound upper, List<Bounds> off) {
+    sealed interface Space permits Universe, Empty, Union, Bounds {
+        Space intersect(Space another);
+        Space union(Space another);
+        long volume();
+    }
+
+    record Universe() implements Space {
+        @Override
+        public Space intersect(Space another) {
+            return another;
+        }
+
+        @Override
+        public Space union(Space another) {
+            return this;
+        }
+
+        @Override
+        public long volume() {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    record Empty() implements Space {
+
+        @Override
+        public Space intersect(Space another) {
+            return this;
+        }
+
+        @Override
+        public Space union(Space another) {
+            return another;
+        }
+
+        @Override
+        public long volume() {
+            return 0;
+        }
+    }
+
+    record Union(List<Bounds> spaces) implements Space
+    {
+        public Space intersect(Space other) {
+            switch (other)
+            {
+                case Union u: {
+                    // union of intersections
+                    ArrayList<Bounds> newSpaces = new ArrayList<>(spaces.size() * u.spaces.size());
+                    for (Space space : this.spaces) {
+                        for (Space another : u.spaces) {
+                            Space intersect = space.intersect(another);
+                            addSpace(newSpaces, intersect);
+                        }
+                    }
+                    return new Union(newSpaces);
+                }
+                case Bounds b: {
+                    ArrayList<Bounds> newSpaces = new ArrayList<>(spaces.size());
+                    for (Bounds bounds : this.spaces) {
+                        addSpace(newSpaces, bounds.intersect(b));
+                    }
+                    return new Union(newSpaces);
+                }
+                default:
+                    return other.intersect(this);
+            }
+        }
+
+        private void addSpace(ArrayList<Bounds> newSpaces, Space intersect) {
+            switch (intersect)
+            {
+                case Bounds b:
+                    newSpaces.add(b);
+                    break;
+                case Empty e:
+                    break;
+                case Universe u:
+                    throw new UnsupportedOperationException();
+                case Union union:
+                    throw new UnsupportedOperationException();
+            }
+        }
+
+        public Space union(Space space) {
+            switch (space)
+            {
+                case Bounds b:
+                {
+                    ArrayList<Bounds> newSpaces = new ArrayList<>(this.spaces);
+                    newSpaces.add(b);
+                    return new Union(newSpaces);
+                }
+                case Union u:
+                {
+                    ArrayList<Bounds> newSpaces = new ArrayList<>(this.spaces);
+                    newSpaces.addAll(u.spaces);
+                    return new Union(newSpaces);
+                }
+                default:
+                    return space.union(this);
+            }
+        }
+
+        @Override
+        public long volume() {
+            Space countedAlready = new Empty();
+            long volume = 0;
+            for (Space space : spaces) {
+                long diff = space.volume() - countedAlready.intersect(space).volume();
+                volume += diff;
+                countedAlready = countedAlready.union(space);
+            }
+
+            return volume;
+        }
+    }
+
+    record Bounds(boolean on, Bound lower, Bound upper, List<Space> off) implements Space {
         void forEach(final Consumer<Point> consumer)
         {
             for (int x = lower.p.x; x <= upper.p.x; x++) {
@@ -95,7 +201,41 @@ public class TwentyTwo {
         }
 
         public boolean overlapsWith(Bounds that) {
-            return corners().anyMatch(that::containsPoint) || this.contains(that);
+            // overlap in one dimension:
+            // that:   min      max
+            // this:          min          max
+
+            final boolean xOverLap;
+            if (that.lower.p.x < lower.p.x)
+            {
+                xOverLap = lower.p.x <= that.upper.p.x;
+            }
+            else
+            {
+                xOverLap = that.lower.p.x <= upper.p.x;
+            }
+
+            final boolean yOverLap;
+            if (that.lower.p.y < lower.p.y)
+            {
+                yOverLap = lower.p.y <= that.upper.p.y;
+            }
+            else
+            {
+                yOverLap = that.lower.p.y <= upper.p.y;
+            }
+
+            final boolean zOverLap;
+            if (that.lower.p.z < lower.p.z)
+            {
+                zOverLap = lower.p.z <= that.upper.p.z;
+            }
+            else
+            {
+                zOverLap = that.lower.p.z <= upper.p.z;
+            }
+
+            return (xOverLap && yOverLap && zOverLap);
         }
 
         private Stream<Point> corners() {
@@ -127,109 +267,37 @@ public class TwentyTwo {
             lower.p.z <= that.lower.p.z && that.lower.p.z < upper.p.z;
         }
 
-        public List<Bounds> maskedBy(Bounds another) {
-            final List<Bounds> newBounds = new ArrayList<>();
+        Space intersect(Bounds another) {
+            if (overlapsWith(another)) {
 
-            if (!another.on) {
-                // try a different approach: find the corner of another that's inside us.
-                if (!another.contains(this)) {
-                    if (containsPoint(another.lower.p)) {
-                        int minX = lower.p.x;
-                        if ((lower.p.x <= another.lower.p.x) && (another.lower.p.x <= upper.p.x)) {
-                            int newX = Math.min(another.lower.p.x - 1, upper.p.x);
-                            minX = newX + 1;
-                            newBounds.add(
-                                    newBounds(
-                                            true,
-                                            lower,
-                                            upper.replaceX(newX)));
-                        }
-
-                        int minY = lower.p.y;
-                        if ((lower.p.y <= another.lower.p.y) && (another.lower.p.y <= upper.p.y)) {
-                            // gonna lose x up to min(another.upper.p.y, upper.p.y)
-                            int newY = Math.min(another.lower.p.y - 1, upper.p.y);
-                            minY = newY + 1;
-                            newBounds.add(
-                                    newBounds(
-                                            true,
-                                            lower.replaceX(minX),
-                                            upper.replaceY(newY)));
-                        }
-
-                        if ((lower.p.z <= another.lower.p.z) && (another.lower.p.z <= upper.p.z)) {
-                            // gonna lose x up to min(another.upper.p.z, upper.p.z)
-                            int newZ = Math.min(another.lower.p.z - 1, upper.p.z);
-                            newBounds.add(
-                                    newBounds(
-                                            true,
-                                            lower.replaceX(minX).replaceY(minY),
-                                            upper.replaceZ(newZ)));
-                        }
-                    } else if (containsPoint(another.upper.p)) {
-                        int maxX = upper.p.x;
-                        if ((lower.p.x <= another.upper.p.x) && (another.upper.p.x <= upper.p.x)) {
-                            int newX = Math.max(another.upper.p.x + 1, lower.p.x);
-                            maxX = newX - 1;
-                            newBounds.add(
-                                    newBounds(
-                                            true,
-                                            lower.replaceX(newX),
-                                            upper));
-                        }
-
-                        int maxY = upper.p.y;
-                        if ((lower.p.y <= another.upper.p.y) && (another.upper.p.y <= upper.p.y)) {
-                            int newY = Math.max(another.upper.p.y + 1, lower.p.y);
-                            maxY = newY - 1;
-                            newBounds.add(
-                                    newBounds(
-                                            true,
-                                            lower.replaceY(newY),
-                                            upper.replaceX(maxX)));
-                        }
-
-                        if ((lower.p.z <= another.upper.p.z) && (another.upper.p.z <= upper.p.z)) {
-                            int newZ = Math.max(another.upper.p.z + 1, lower.p.z);
-                            newBounds.add(
-                                    newBounds(
-                                            true,
-                                            lower.replaceZ(newZ),
-                                            upper.replaceX(maxX).replaceY(maxY)));
-                        }
-                    } else {
-                        newBounds.add(this);
-                    }
-                }
+                return newBounds(
+                        true,
+                        lower.max(another.lower),
+                        upper.min(another.upper)
+                );
             }
-            else
-            {
-                newBounds.addAll(this.maskedBy(another.butOff()));
-                newBounds.addAll(another.maskedBy(this.butOff()));
-                newBounds.add(this.intersect(another));
-            }
-            return newBounds;
-        }
 
-        Bounds intersect(Bounds another) {
-            return newBounds(
-                    true,
-                    lower.max(another.lower),
-                    upper.min(another.upper)
-            );
-        }
-
-        private Bounds butOff() {
-            return newBounds(false, lower, upper);
+            return new Empty();
         }
 
         public long onCount() {
             if (!off.isEmpty()) {
-                //Bounds initOff = null;
-                int offCount = 0;
-                for (Bounds bounds : off) {
-                    final Bounds intersection = this.intersect(bounds);
-                    offCount += intersection.volume();
+                // Bounds initOff = null;
+                Space allOff = new Empty();
+                long offCount = 0;
+                for (Space space : off) {
+                    Space intersect = space.intersect(this);
+                    Space alreadyOff = allOff.intersect(space);
+                    long wouldTurnOffCount = intersect.volume();
+                    long alreadyOffCount = alreadyOff.volume();
+                    long oneOffDiff = Math.max(0, wouldTurnOffCount - alreadyOffCount);
+                    if (oneOffDiff > volume())
+                    {
+                        // wtf
+                        System.out.println("wtf");
+                    }
+                    offCount += oneOffDiff;
+                    allOff = allOff.union(intersect);
                 }
 
                 return volume() - offCount;
@@ -238,7 +306,8 @@ public class TwentyTwo {
             return volume();
         }
 
-        private long volume() {
+        @Override
+        public long volume() {
             final long xDim = (1 + (upper.p.x - lower.p.x));
             final long yDim = (1 + (upper.p.y - lower.p.y));
             final long zDim = (1 + (upper.p.z - lower.p.z));
@@ -249,16 +318,54 @@ public class TwentyTwo {
         public void mask(Bounds another) {
             if (!another.on)
             {
-                off.add(another);
+                off.add(intersect(another));
             }
             else
             {
                 off.add(intersect(another));
             }
         }
+
+        @Override
+        public Space intersect(Space space) {
+            switch (space)
+            {
+                case Bounds b:
+                    if (this.overlapsWith(b))
+                    {
+                        return intersect(b);
+                    }
+                    else
+                    {
+                        return new Empty();
+                    }
+                case Universe ignored:
+                    return this;
+                case Union union:
+                {
+                    Space result = this;
+                    for (Space s : union.spaces) {
+                        result = this.intersect(s);
+                    }
+                    return result;
+                }
+                case Empty empty:
+                    return empty;
+                default:
+                    throw new UnsupportedOperationException();
+            }
+        }
+
+        @Override
+        public Space union(Space another) {
+            if (another instanceof Bounds b) {
+                return new Union(List.of(this, b));
+            }
+            return another.union(this);
+        }
     }
 
-    record Input(List<Bounds> inRange)
+    record Input(List<Bounds> range)
     {
 
     }
@@ -266,8 +373,12 @@ public class TwentyTwo {
     public static long onCubes(InputStream stream) throws IOException {
         final Input input = parseInput(stream);
 
+        return partOne(input.range);
+    }
+
+    public static int partOne(List<Bounds> range) {
         final Set<Point> on = new HashSet<>();
-        for (Bounds bounds : input.inRange) {
+        for (Bounds bounds : range) {
             if (!bounds.outOfRange()) {
                 if (bounds.on) {
                     bounds.forEach(on::add);
@@ -284,8 +395,7 @@ public class TwentyTwo {
         final Input input = parseInput(stream);
 
         final Set<Point> on = new HashSet<>();
-        List<Bounds> outOfRange = new ArrayList<>();
-        for (Bounds bounds : input.inRange) {
+        for (Bounds bounds : input.range) {
             if (!bounds.outOfRange()) {
                 if (bounds.on) {
                     bounds.forEach(on::add);
@@ -293,31 +403,29 @@ public class TwentyTwo {
                     bounds.forEach(on::remove);
                 }
             }
-            else
-            {
-                final List<Bounds> newOutOfRange = new ArrayList<>();
-                for (Bounds oor : outOfRange) {
-                    if (oor.overlapsWith(bounds) || bounds.overlapsWith(oor)) {
-                        newOutOfRange.addAll(oor.maskedBy(bounds));
-                    } else {
-                        newOutOfRange.add(oor);
-                    }
-                }
-
-                if (bounds.on)
-                {
-                    newOutOfRange.add(bounds);
-                }
-
-
-                outOfRange = newOutOfRange;
-
-            }
         }
 
-        final long outsideSum = outOfRange.stream().mapToLong(Bounds::onCount).sum();
+        List<Bounds> toProcess = input.range.stream().filter(Bounds::outOfRange).toList();
+        final long outsideSum = sumOutsiders(toProcess);
 
         return on.size() + outsideSum;
+    }
+
+    static long sumOutsiders(List<Bounds> toProcess) {
+        List<Bounds> outOfRange = new ArrayList<>();
+        for (Bounds bounds : toProcess) {
+            for (Bounds oor : outOfRange) {
+                if (bounds.overlapsWith(oor)) {
+                    oor.mask(bounds);
+                }
+            }
+
+            if (bounds.on)
+            {
+                outOfRange.add(bounds);
+            }
+        }
+        return outOfRange.stream().mapToLong(Bounds::onCount).sum();
     }
 
 

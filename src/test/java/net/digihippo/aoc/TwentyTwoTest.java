@@ -129,6 +129,11 @@ class TwentyTwoTest {
     }
 
     @Test
+    void partTwo() throws IOException {
+        System.out.println(TwentyTwo.onCubesPartTwo(Inputs.puzzleInput("twentytwo.txt")));
+    }
+
+    @Test
     void overlap() {
         final Bounds first = newBounds(
                 true,
@@ -146,24 +151,49 @@ class TwentyTwoTest {
     }
 
     @Test
-    void overlapOnAndOff() {
+    void intersectOfUnion() {
         final Bounds first = newBounds(
                 true,
                 new Bound(new Point(1, 1, 1)),
                 new Bound(new Point(3, 3, 3)));
         final Bounds second = newBounds(
-                false,
+                true,
+                new Bound(new Point(4, 4, 4)),
+                new Bound(new Point(6, 6, 6)));
+
+        TwentyTwo.Union union = new TwentyTwo.Union(List.of(first, second));
+
+        TwentyTwo.Space ints = union.intersect(newBounds(
+                true,
                 new Bound(new Point(3, 3, 3)),
-                new Bound(new Point(5, 5, 5)));
+                new Bound(new Point(4, 4, 4)
+                )));
 
-
-        List<Bounds> bounds = first.maskedBy(second);
-
-        assertEquals(
-                26,
-                bounds.stream().mapToLong(Bounds::onCount).sum()
-        );
+        assertEquals(2, ints.volume());
     }
+
+    @Test
+    void intersectOfUnionAgain() {
+        final Bounds first = newBounds(
+                true,
+                new Bound(new Point(1, 1, 1)),
+                new Bound(new Point(4, 4, 4)));
+        final Bounds second = newBounds(
+                true,
+                new Bound(new Point(4, 4, 4)),
+                new Bound(new Point(6, 6, 6)));
+
+        TwentyTwo.Union union = new TwentyTwo.Union(List.of(first, second));
+
+        TwentyTwo.Space ints = union.intersect(newBounds(
+                true,
+                new Bound(new Point(3, 3, 3)),
+                new Bound(new Point(4, 4, 4)
+                )));
+
+        assertEquals(8, ints.volume());
+    }
+
 
     @Test
     void moreOverLap() {
@@ -175,13 +205,13 @@ class TwentyTwoTest {
                 false,
                 new Bound(new Point(2, 2, 2)),
                 new Bound(new Point(5, 5, 5)));
-
-        List<Bounds> bounds = first.maskedBy(second);
-
-        assertEquals(
-                19,
-                bounds.stream().mapToLong(Bounds::onCount).sum()
-        );
+//
+//        List<Bounds> bounds = first.maskedBy(second);
+//
+//        assertEquals(
+//                19,
+//                bounds.stream().mapToLong(Bounds::onCount).sum()
+//        );
     }
 
     @Test
@@ -194,36 +224,13 @@ class TwentyTwoTest {
                 false,
                 new Bound(new Point(0, 0, 0)),
                 new Bound(new Point(2, 2, 2)));
-
-        List<Bounds> bounds = first.maskedBy(second);
-
-        assertEquals(
-                19,
-                bounds.stream().mapToLong(Bounds::onCount).sum()
-        );
-    }
-
-    @Test
-    void overLapAnotherCorner() {
-        final Bounds first = newBounds(
-                true,
-                new Bound(new Point(0, 0, 0)),
-                new Bound(new Point(1, 1, 0)));
-        final Bounds second = newBounds(
-                false,
-                new Bound(new Point(-1, 1, 0)),
-                new Bound(new Point(0, 2, 0)));
-
-        assertTrue(first.overlapsWith(second));
-
-        System.out.println(first.intersect(second));
-
-        List<Bounds> bounds = first.maskedBy(second);
-
-        assertEquals(
-                3,
-                bounds.stream().mapToLong(Bounds::onCount).sum()
-        );
+//
+//        List<Bounds> bounds = first.maskedBy(second);
+//
+//        assertEquals(
+//                19,
+//                bounds.stream().mapToLong(Bounds::onCount).sum()
+//        );
     }
 
     @Test
@@ -238,13 +245,13 @@ class TwentyTwoTest {
                 new Bound(new Point(2, 2, 2)));
 
         assertTrue(first.overlapsWith(second));
-
-        List<Bounds> bounds = first.maskedBy(second);
-
-        assertEquals(
-                27 + 9 + 6 + 4,
-                bounds.stream().mapToLong(Bounds::onCount).sum()
-        );
+//
+//        List<Bounds> bounds = first.maskedBy(second);
+//
+//        assertEquals(
+//                27 + 9 + 6 + 4,
+//                bounds.stream().mapToLong(Bounds::onCount).sum()
+//        );
     }
 
     @Test
@@ -323,7 +330,7 @@ class TwentyTwoTest {
     void doAnyOffSectionsOverlap() throws IOException {
         final TwentyTwo.Input input = TwentyTwo.parseInput(Inputs.asInputStream(exampleTwoInput));
 
-        final List<Bounds> bounds = input.inRange();
+        final List<Bounds> bounds = input.range();
 
         final List<Bounds> offOor = new ArrayList<>();
         for (Bounds bound : bounds) {
@@ -341,5 +348,173 @@ class TwentyTwoTest {
                 }
             }
         }
+    }
+
+    @Test
+    void aSmallerExample() throws IOException {
+        final String input = """
+                on x=-57795..-6158,y=29564..72030,z=20435..90618
+                on x=36731..105352,y=-21140..28532,z=16094..90401""";
+        long result = TwentyTwo.onCubesPartTwo(Inputs.asInputStream(input));
+
+        // is there any overlap? No. so just should be volume of the two
+        assertEquals(
+                ((57796L - 6158L) * (72031L - 29564L) * (90619L - 20435L)) +
+                        ((105353 - 36731L) * (28533L + 21140L) * (90402L - 16094L)),
+                result);
+    }
+
+
+    @Test
+    void aSmallerExampleWithSomeOverlaps() throws IOException {
+        final String input = """
+                on x=1..3,y=1..3,z=1..3
+                on x=2..3,y=2..3,z=2..3
+                on x=2..3,y=2..3,z=2..3
+                """;
+        TwentyTwo.Input result = TwentyTwo.parseInput(Inputs.asInputStream(input));
+
+        // is there any overlap? No. so just should be volume of the two
+        assertEquals(
+                27,
+                TwentyTwo.sumOutsiders(result.range()));
+    }
+
+    @Test
+    void aSmallerExampleWithSomeOverlapsAndAnOff() throws IOException {
+        final String input = """
+                on x=1..3,y=1..3,z=1..3
+                on x=2..3,y=2..3,z=2..3
+                on x=2..3,y=2..3,z=2..3
+                off x=3..3,y=3..3,z=3..3
+                """;
+        TwentyTwo.Input result = TwentyTwo.parseInput(Inputs.asInputStream(input));
+
+        assertEquals(
+                26,
+                TwentyTwo.sumOutsiders(result.range()));
+    }
+
+    @Test
+    void aSmallerExampleWithSomeOverlapsAndAnOffAndAnOn() throws IOException {
+        final String input = """
+                on x=1..3,y=1..3,z=1..3
+                on x=2..3,y=2..3,z=2..3
+                on x=2..3,y=2..3,z=2..3
+                off x=3..3,y=3..3,z=3..3
+                on x=3..3,y=3..3,z=3..3
+                """;
+        TwentyTwo.Input result = TwentyTwo.parseInput(Inputs.asInputStream(input));
+
+        assertEquals(
+                27,
+                TwentyTwo.sumOutsiders(result.range()));
+    }
+
+    @Test
+    void volumeLikeThisDoesWorkRight() {
+        long vol = newBounds(true, new Bound(new Point(-1, -1, -1)), new Bound(new Point(1, 1, 1))).volume();
+        assertEquals(27, vol);
+    }
+
+    @Test
+    void offOneByOne() throws IOException {
+        final String input = """
+                on x=1..3,y=1..3,z=0..0
+                off x=-1..2,y=-1..2,z=0..0
+                off x=2..4,y=2..4,z=0..0
+                off x=-1..2,y=2..4,z=0..0
+                off x=2..4,y=-1..2,z=0..0
+                """;
+        TwentyTwo.Input result = TwentyTwo.parseInput(Inputs.asInputStream(input));
+
+        assertEquals(
+                0,
+                TwentyTwo.sumOutsiders(result.range()));
+    }
+
+    @Test
+    void offTwice() throws IOException {
+        final String input = """
+                on x=1..3,y=1..3,z=0..0
+                off x=-1..2,y=-1..2,z=0..0
+                off x=-1..2,y=-1..2,z=0..0
+                """;
+        TwentyTwo.Input result = TwentyTwo.parseInput(Inputs.asInputStream(input));
+
+        assertEquals(
+                5,
+                TwentyTwo.sumOutsiders(result.range()));
+    }
+
+    @Test
+    void offCentreOfCube() throws IOException {
+        final String input = """
+                on x=1..3,y=1..3,z=1..3
+                off x=2..2,y=2..2,z=2..2s
+                """;
+        TwentyTwo.Input result = TwentyTwo.parseInput(Inputs.asInputStream(input));
+
+        assertEquals(
+                26,
+                TwentyTwo.sumOutsiders(result.range()));
+    }
+
+    @Test
+    void threeIsEnoughToBreakIt() throws IOException {
+        TwentyTwo.Input input = TwentyTwo.parseInput(Inputs.asInputStream("""
+                on x=-20..26,y=-36..17,z=-47..7
+                on x=-20..33,y=-21..23,z=-26..28
+                on x=-22..28,y=-29..23,z=-38..16"""));
+
+
+        Bounds one = newBounds(true, new Bound(new Point(-20, -36, -47)), new Bound(new Point(26, 17, 7)));
+        Bounds two = newBounds(true, new Bound(new Point(-20, -21, -26)), new Bound(new Point(33, 23, 28)));
+        Bounds three = newBounds(true, new Bound(new Point(-22, -29, -38)), new Bound(new Point(28, 23, 16)));
+
+        System.out.println(one.volume());
+        System.out.println(two.volume());
+        System.out.println(three.volume());
+
+        // -19, 0, 0 is in both
+        assertTrue(three.overlapsWith(one));
+
+        // sum of vols: 421905
+        // 62322
+        // 101614
+        // 94815
+        // what sum did we actually do?
+        System.out.println(one.intersect(two).volume());
+        System.out.println(one.intersect(three).volume());
+        System.out.println(two.intersect(three).volume());
+
+        assertEquals(225476, TwentyTwo.sumOutsiders(input.range()));
+    }
+
+    @Test
+    void usingPartOneInput() throws IOException {
+        TwentyTwo.Input input = TwentyTwo.parseInput(Inputs.asInputStream("""
+                on x=-20..26,y=-36..17,z=-47..7
+                on x=-20..33,y=-21..23,z=-26..28
+                on x=-22..28,y=-29..23,z=-38..16
+                on x=-46..7,y=-6..46,z=-50..-1
+                on x=-49..1,y=-3..46,z=-24..28
+                on x=2..47,y=-22..22,z=-23..27
+                on x=-27..23,y=-28..26,z=-21..29
+                on x=-39..5,y=-6..47,z=-3..44
+                on x=-30..21,y=-8..43,z=-13..34
+                on x=-22..26,y=-27..20,z=-29..19
+                off x=-48..-32,y=26..41,z=-47..-37
+                on x=-12..35,y=6..50,z=-50..-2
+                off x=-48..-32,y=-32..-16,z=-15..-5
+                on x=-18..26,y=-33..15,z=-7..46
+                off x=-40..-22,y=-38..-28,z=23..41
+                on x=-16..35,y=-41..10,z=-47..6
+                off x=-32..-23,y=11..30,z=-14..3
+                on x=-49..-5,y=-3..45,z=-29..18
+                off x=18..30,y=-20..-8,z=-3..13
+                on x=-41..9,y=-7..43,z=-33..15"""));
+
+        assertEquals(590784, TwentyTwo.sumOutsiders(input.range()));
     }
 }
