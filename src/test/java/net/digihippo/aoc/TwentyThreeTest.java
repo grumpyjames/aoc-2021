@@ -297,7 +297,7 @@ class TwentyThreeTest {
 
     @Test
     void partOne() throws IOException {
-        System.out.println(TwentyThree.minimumCost(Inputs.puzzleInput("twentythree.txt")));
+//        System.out.println(TwentyThree.minimumCost(Inputs.puzzleInput("twentythree.txt")));
     }
 
     private TwentyThree.Entry entry(int fromHallwayIndex, char pod, int toRoomIndex, int roomSlot, long cost) {

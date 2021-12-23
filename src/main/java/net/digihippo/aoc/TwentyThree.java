@@ -184,6 +184,10 @@ public class TwentyThree {
                     ", hallway=" + new String(hallway) +
                     '}';
         }
+
+        public int depth() {
+            return corridors[0].length();
+        }
     }
 
     static boolean reachable(char[] hallway, int toIndex, int fromIndex)
@@ -327,10 +331,20 @@ public class TwentyThree {
 
             int hMove = Math.abs(targetX - i);
 
-            if (corridor.charAt(1) == '.' && corridor.charAt(0) == '.') {
-                moves.add(new Entry(i, c, index, 1, (2 + hMove) * moveCost));
-            } else if (corridor.charAt(0) == '.' && corridor.charAt(1) == c) {
-                moves.add(new Entry(i, c, index, 0, (1 + hMove) * moveCost));
+            for (int j = 0; j < corridor.length(); j++) {
+                boolean matching = true;
+                for (int k = 0; k <= j; k++) {
+                    matching &= corridor.charAt(k) == '.';
+                }
+                for (int k = j + 1; k < corridor.length(); k++) {
+                    matching &= corridor.charAt(k) == targetPod;
+                }
+
+                if (matching)
+                {
+                    moves.add(new Entry(i, c, index, j, (j + 1 + hMove) * moveCost));
+                    return;
+                }
             }
         }
     }
