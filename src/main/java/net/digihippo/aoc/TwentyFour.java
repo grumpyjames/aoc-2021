@@ -13,6 +13,13 @@ public class TwentyFour {
         final int[] digits = new int[] {1, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9};
 
         int count = 0;
+
+        for (int i = 0; i < 9; i++) {
+            int[] replace = new int[] {i, i, i, i, i, i, i, i};
+            final RegisterValue injected = alu.expressions[3].replace(replace);
+            System.out.println("min: " + injected.min() + ", max: " + injected.max());
+        }
+
         while (digits[12] > 0) {
             final long evaluate = alu.expressions[3].evaluate(digits);
             System.out.println(count + ", " + evaluate + ", " + Arrays.toString(digits));
@@ -74,6 +81,7 @@ public class TwentyFour {
     sealed interface RegisterValue permits Compound, Exactly, ReadInput {
         String expr();
         long evaluate(int[] input);
+        RegisterValue replace(int[] input);
         void printTo(PrintStream ps, int depth);
 
         long max();
@@ -89,6 +97,15 @@ public class TwentyFour {
         @Override
         public long evaluate(int[] input) {
             return input[index];
+        }
+
+        @Override
+        public RegisterValue replace(int[] input) {
+            if (index < input.length)
+            {
+                return new Exactly(input[index]);
+            }
+            return this;
         }
 
         @Override
@@ -116,6 +133,11 @@ public class TwentyFour {
         @Override
         public long evaluate(int[] input) {
             return value;
+        }
+
+        @Override
+        public RegisterValue replace(int[] input) {
+            return this;
         }
 
         @Override
@@ -158,6 +180,11 @@ public class TwentyFour {
         @Override
         public long evaluate(int[] input) {
             return operator.lf.execute(left.evaluate(input), right.evaluate(input));
+        }
+
+        @Override
+        public RegisterValue replace(int[] input) {
+            return new Compound(left.replace(input), right.replace(input), operator);
         }
 
         @Override
