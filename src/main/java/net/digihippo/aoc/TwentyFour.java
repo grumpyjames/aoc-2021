@@ -10,14 +10,12 @@ public class TwentyFour {
     public static long findLargestModelNumber(InputStream stream) throws IOException {
         final LazyAlu alu = prepareAlu(stream);
 
-        final int[] digits = new int[] {9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9};
+        final int[] digits = new int[] {1, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9};
 
         int count = 0;
-        while (digits[0] > 0) {
-            if (alu.expressions[3].evaluate(digits) == 0)
-            {
-                System.out.println(Arrays.toString(digits));
-            }
+        while (digits[12] > 0) {
+            final long evaluate = alu.expressions[3].evaluate(digits);
+            System.out.println(count + ", " + evaluate + ", " + Arrays.toString(digits));
             decrement(digits);
             count++;
 
@@ -27,6 +25,27 @@ public class TwentyFour {
             }
         }
         
+        return 0;
+    }
+
+    public static long findLargestModelNumberEager(InputStream stream) throws IOException {
+        final Alu alu = new Alu();
+        final List<Instruction> instructions = parse(stream);
+
+
+        final long biggest = 99999999999999L;
+//        final long biggest = 99992129102366L;
+
+        int count = 0;
+        while (count < 10000) {
+            alu.reset(Long.toString(biggest - count));
+            instructions.forEach(i -> i.execute(alu));
+
+            System.out.println(count + ", " + alu.registers[3] + ", " + (biggest - count));
+
+            count++;
+        }
+
         return 0;
     }
 
@@ -162,7 +181,7 @@ public class TwentyFour {
                     return Math.abs(left.max() * right.max());
                 }
                 case Div -> {
-                    return left.max();
+                    return Math.abs(left.max() / right.min());
                 }
                 case Mod -> {
                     return Math.min(left.max(), right.max() - 1);
@@ -185,7 +204,7 @@ public class TwentyFour {
                     return left.min() + right.min();
                 }
                 case Mul -> {
-                    return -(left.max() + right.max());
+                    return -(left.max() * right.max());
                 }
                 case Div -> {
                     return 0L;
@@ -206,22 +225,50 @@ public class TwentyFour {
 
         public RegisterValue simplify() {
             if (operator == Operator.Eq) {
-                return simplifyEq();
+                final RegisterValue simplified = simplifyEq();
+
+                printSimplified(simplified);
+
+                return simplified;
             }
             else if (operator == Operator.Add) {
-                return simplifyAdd();
+                final RegisterValue simplified = simplifyAdd();
+
+                printSimplified(simplified);
+
+                return simplified;
             }
             else if (operator == Operator.Mul) {
-                return simplifyMul();
+                final RegisterValue simplified = simplifyMul();
+
+                printSimplified(simplified);
+
+                return simplified;
             }
             else if (operator == Operator.Div) {
-                return simplifyDiv();
+                final RegisterValue simplified = simplifyDiv();
+
+                printSimplified(simplified);
+
+                return simplified;
             }
             else if (operator == Operator.Mod) {
-                return simplifyMod();
+                final RegisterValue simplified = simplifyMod();
+
+                printSimplified(simplified);
+
+                return simplified;
             }
 
             return this;
+        }
+
+        private void printSimplified(RegisterValue simplified) {
+            if (simplified != this) {
+//                System.out.println("Simplified:\n\t" + this + "\nto\n\t" + simplified + "\n");
+            } else {
+                System.out.println("Unable to simplify:\n\t" + this);
+            }
         }
 
         private RegisterValue simplifyMod() {
@@ -234,6 +281,58 @@ public class TwentyFour {
                         return new Exactly(1);
                     } else if (left.max() < e.value) {
                         return left;
+                    } else {
+                        switch (left) {
+                            case Compound c:
+                                if (c.operator == Operator.Add)
+                                {
+                                    if (
+                                            c.left instanceof final Exactly e2 &&
+                                            c.right instanceof final Compound depthTwo)
+                                    {
+                                        if (depthTwo.operator == Operator.Mul) {
+                                            if (depthTwo.left.equals(e) || depthTwo.right.equals(e)) {
+                                                return new Exactly(e2.value % e.value);
+                                            }
+                                        }
+                                    }
+                                    else if (
+                                            c.right instanceof final Exactly e2 &&
+                                            c.left instanceof final Compound depthTwo
+                                    )
+                                    {
+                                        if (depthTwo.operator == Operator.Mul) {
+                                            if (depthTwo.left.equals(e) || depthTwo.right.equals(e)) {
+                                                return new Exactly(e2.value % e.value);
+                                            }
+                                        }
+                                    }
+                                    else if (
+                                        c.left.max() < e.value &&
+                                        c.right instanceof final Compound depthTwo
+                                    )
+                                    {
+                                        if (depthTwo.operator == Operator.Mul) {
+                                            if (depthTwo.left.equals(e) || depthTwo.right.equals(e)) {
+                                                return c.left;
+                                            }
+                                        }
+                                    }
+                                    else if (
+                                            c.right.max() < e.value &&
+                                            c.left instanceof final Compound depthTwo
+                                    )
+                                    {
+                                        if (depthTwo.operator == Operator.Mul) {
+                                            if (depthTwo.left.equals(e) || depthTwo.right.equals(e)) {
+                                                return c.right;
+                                            }
+                                        }
+                                    }
+                                }
+                            default:
+                                return this;
+                        }
                     }
                 default:
                     return this;
@@ -284,116 +383,8 @@ public class TwentyFour {
                 return left;
             }
 
-            switch (left)
-            {
-                case Exactly e:
-                    switch (right)
-                    {
-                        case Compound c:
-                            if (c.operator == Operator.Add)
-                            {
-                                switch (c.right)
-                                {
-                                    case Exactly e2:
-                                        return newCompound(
-                                                newCompound(e, c.left, Operator.Mul),
-                                                new Exactly(e2.value * e.value),
-                                                Operator.Add
-                                        );
-                                    default:
-                                        return switch (c.left) {
-                                            case Exactly e3 -> newCompound(
-                                                    newCompound(e, c.right, Operator.Mul),
-                                                    new Exactly(e3.value * e.value),
-                                                    Operator.Add
-                                            );
-                                            default -> this;
-                                        };
-                                }
-                            }
-                        default:
-                            return this;
-                    }
-                case Compound c:
-                    switch (right) {
-                        case Exactly e:
-                            if (c.operator == Operator.Add) {
-                                return switch (c.right) {
-                                    case Exactly e2 -> newCompound(
-                                            newCompound(e, c.left, Operator.Mul),
-                                            new Exactly(e2.value * e.value),
-                                            Operator.Add
-                                    );
-                                    default -> switch (c.left) {
-                                        case Exactly e3 -> newCompound(
-                                                newCompound(e, c.right, Operator.Mul),
-                                                new Exactly(e3.value * e.value),
-                                                Operator.Add
-                                        );
-                                        default -> this;
-                                    };
-                                };
-                            }
-                        default:
-                            return this;
-                    }
-                default:
-                    return this;
-            }
-
-//            switch (left)
-//            {
-//                case Exactly e:
-//                    if (e.value == 0)
-//                    {
-//                        return new Exactly(0);
-//                    } else if (e.value == 1)
-//                    {
-//                        return right;
-//                    }
-//                    switch (right)
-//                    {
-//                        case Compound c:
-//                            if (c.operator == Operator.Div)
-//                            {
-//                                if (c.right.equals(this.left))
-//                                {
-//                                    return newCompound(c.left, c.right, Operator.Rem);
-//                                }
-//
-//                                if (c.right.equals(this.right))
-//                                {
-//                                    return newCompound(c.left, c.right, Operator.Rem);
-//                                }
-//                            }
-//                        default:
-//                            return this;
-//                    }
-//                case Compound c:
-//                    if (c.operator == Operator.Div)
-//                    {
-//                        if (c.right.equals(this.left)) {
-//                            return newCompound(c.left, c.right, Operator.Rem);
-//                        }
-//                        if (c.right.equals(this.right)) {
-//                            return newCompound(c.left, c.right, Operator.Rem);
-//                        }
-//                    }
-//                    return this;
-//                default:
-//                    switch (right) {
-//                        case Exactly e2:
-//                            if (e2.value == 0) {
-//                                return new Exactly(0);
-//                            } else if (e2.value == 1) {
-//                                return left;
-//                            }
-//                        default:
-//                            return this;
-//                    }
-            // }
-            }
-
+            return this;
+        }
 
         private RegisterValue simplifyAdd() {
             switch (left)
@@ -586,6 +577,7 @@ public class TwentyFour {
         final LazyAlu lazyAlu = new LazyAlu();
         for (int j = 0; j < instructions.size(); j++) {
             Instruction i = instructions.get(j);
+            System.out.println("Executing instruction " + i);
             i.executeLazy(lazyAlu);
         }
 

@@ -5,11 +5,11 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.util.Arrays;
 
-import static net.digihippo.aoc.TwentyFour.Operator.Add;
-import static net.digihippo.aoc.TwentyFour.Operator.Mul;
+import static net.digihippo.aoc.TwentyFour.Operator.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TwentyFourTest {
+
     @Test
     void multiply() throws IOException {
         final long[] registers = TwentyFour.run(
@@ -122,13 +122,6 @@ class TwentyFourTest {
         for (TwentyFour.RegisterValue expression : expressions) {
             System.out.println(expression.evaluate(new int[] {4}));
         }
-    }
-
-    @Test
-    void exploration() throws IOException {
-        TwentyFour.expressions(
-                Inputs.puzzleInput("twentyfour.txt")
-        )[3].printTo(System.out, 1);
     }
 
     @Test
@@ -258,7 +251,7 @@ class TwentyFourTest {
                 new TwentyFour.Compound(
                         compound,
                         new TwentyFour.Exactly(40),
-                        TwentyFour.Operator.Mod
+                        Mod
                 );
         assertEquals(compound, mod.simplify());
     }
@@ -434,8 +427,99 @@ class TwentyFourTest {
 //        );
 //    }
 
+    // mod plus mul
+    @Test
+    void deep()
+    {
+        final TwentyFour.Exactly five = new TwentyFour.Exactly(5);
+        final TwentyFour.Compound modOfAddOfMul = new TwentyFour.Compound(
+                new TwentyFour.Compound(
+                        new TwentyFour.Compound(
+                                new TwentyFour.ReadInput(3),
+                                five,
+                                Mul),
+                        new TwentyFour.Exactly(11),
+                        Add
+                ),
+                five,
+                Mod
+        );
+        final TwentyFour.Compound modOfAddOfMul2 = new TwentyFour.Compound(
+                new TwentyFour.Compound(
+                        new TwentyFour.Compound(
+                                five,
+                                new TwentyFour.ReadInput(3),
+                                Mul),
+                        new TwentyFour.Exactly(11),
+                        Add
+                ),
+                five,
+                Mod
+        );
+        final TwentyFour.Compound modOfAddOfMul3 = new TwentyFour.Compound(
+                new TwentyFour.Compound(
+                        new TwentyFour.Exactly(11),
+                        new TwentyFour.Compound(
+                                five,
+                                new TwentyFour.ReadInput(3),
+                                Mul),
+                        Add
+                ),
+                five,
+                Mod
+        );
+
+        final TwentyFour.Exactly one = new TwentyFour.Exactly(1);
+        assertEquals(one, modOfAddOfMul3.simplify());
+        assertEquals(one, modOfAddOfMul2.simplify());
+        assertEquals(one, modOfAddOfMul.simplify());
+    }
+
+    @Test
+    void deeper()
+    {
+        final TwentyFour.Exactly five = new TwentyFour.Exactly(28);
+        final TwentyFour.Compound modOfAddOfMul = new TwentyFour.Compound(
+                new TwentyFour.Compound(
+                        new TwentyFour.Compound(
+                                new TwentyFour.ReadInput(3),
+                                five,
+                                Mul),
+                        new TwentyFour.Compound(
+                                new TwentyFour.ReadInput(3),
+                                new TwentyFour.Exactly(11),
+                                Add),
+                        Add
+                ),
+                five,
+                Mod
+        );
+
+        assertEquals(
+                new TwentyFour.Compound(
+                        new TwentyFour.ReadInput(3),
+                        new TwentyFour.Exactly(11),
+                        Add),
+                modOfAddOfMul.simplify());
+    }
+
+    @Test
+    void exploration() throws IOException {
+        final TwentyFour.RegisterValue[] expressions = TwentyFour.expressions(
+                Inputs.puzzleInput("twentyfour.txt")
+        );
+        System.out.println(expressions[3].min());
+        System.out.println(expressions[3].max());
+        expressions[3].printTo(System.out, 1);
+    }
+
     @Test
     void partOne() throws IOException {
         System.out.println(TwentyFour.findLargestModelNumber(Inputs.puzzleInput("twentyfour.txt")));
+    }
+
+    @Test
+    void partOneEager() throws IOException {
+        System.out.println(TwentyFour.findLargestModelNumberEager(Inputs.puzzleInput("twentyfour.txt")));
     }
 }
