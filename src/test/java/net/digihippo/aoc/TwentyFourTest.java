@@ -4,6 +4,8 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
+import static net.digihippo.aoc.TwentyFour.Operator.Add;
+import static net.digihippo.aoc.TwentyFour.Operator.Mul;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TwentyFourTest {
@@ -22,14 +24,14 @@ class TwentyFourTest {
 
     @Test
     void expressions() throws IOException {
-        String[] exprs = TwentyFour.expressions(
+        TwentyFour.RegisterValue[] exprs = TwentyFour.expressions(
                 Inputs.asInputStream("""
                         inp x
                         mul x -1
                         """)
         );
 
-        assertEquals("({0}) * (-1)", exprs[1]);
+        assertEquals("{0}*-1", exprs[1].expr());
     }
 
     @Test
@@ -104,7 +106,7 @@ class TwentyFourTest {
     void exploration() throws IOException {
         TwentyFour.expressions(
                 Inputs.puzzleInput("twentyfour.txt")
-        );
+        )[3].printTo(System.out, 1);
     }
 
     @Test
@@ -129,7 +131,7 @@ class TwentyFourTest {
     @Test
     void simplifyAddition() {
         final TwentyFour.Compound compound =
-                new TwentyFour.Compound(new TwentyFour.ReadInput(1), new TwentyFour.Exactly(0), TwentyFour.Operator.Add);
+                new TwentyFour.Compound(new TwentyFour.ReadInput(1), new TwentyFour.Exactly(0), Add);
 
         assertEquals(
                 new TwentyFour.ReadInput(1),
@@ -137,7 +139,7 @@ class TwentyFourTest {
         );
 
         final TwentyFour.Compound compoundTwo =
-                new TwentyFour.Compound(new TwentyFour.Exactly(0), new TwentyFour.ReadInput(1), TwentyFour.Operator.Add);
+                new TwentyFour.Compound(new TwentyFour.Exactly(0), new TwentyFour.ReadInput(1), Add);
 
         assertEquals(
                 new TwentyFour.ReadInput(1),
@@ -229,7 +231,7 @@ class TwentyFourTest {
                 new TwentyFour.Compound(
                         new TwentyFour.ReadInput(1),
                         new TwentyFour.Exactly(14),
-                        TwentyFour.Operator.Add);
+                        Add);
         final TwentyFour.Compound mod =
                 new TwentyFour.Compound(
                         compound,
@@ -245,20 +247,170 @@ class TwentyFourTest {
                 new TwentyFour.Compound(
                         new TwentyFour.ReadInput(1),
                         new TwentyFour.Exactly(14),
-                        TwentyFour.Operator.Add);
+                        Add);
         final TwentyFour.Compound another =
                 new TwentyFour.Compound(
-                        new TwentyFour.ReadInput(16),
+                        new TwentyFour.Exactly(16),
                         oneAdd,
-                        TwentyFour.Operator.Add);
+                        Add);
+        final TwentyFour.Compound anotherFlipped =
+                new TwentyFour.Compound(
+                        oneAdd,
+                        new TwentyFour.Exactly(16),
+                        Add);
+
         assertEquals(
                 new TwentyFour.Compound(
                         new TwentyFour.ReadInput(1),
-                        new TwentyFour.Exactly(14),
-                        TwentyFour.Operator.Add),
+                        new TwentyFour.Exactly(30),
+                        Add),
                 another.simplify()
         );
+
+        assertEquals(
+                new TwentyFour.Compound(
+                        new TwentyFour.ReadInput(1),
+                        new TwentyFour.Exactly(30),
+                        Add),
+                anotherFlipped.simplify()
+        );
+
+        final TwentyFour.Compound irreducable =
+                new TwentyFour.Compound(
+                        oneAdd,
+                        new TwentyFour.ReadInput(6),
+                        Add);
+        assertEquals(irreducable, irreducable.simplify());
     }
+
+    @Test
+    void simplifyEqualityWithRanges() {
+        final TwentyFour.Compound add =
+                new TwentyFour.Compound(
+                        new TwentyFour.ReadInput(1),
+                        new TwentyFour.Exactly(26),
+                        Add);
+
+        final TwentyFour.Compound cmp =
+                new TwentyFour.Compound(
+                        new TwentyFour.ReadInput(2),
+                        add,
+                        TwentyFour.Operator.Eq);
+
+        assertEquals(new TwentyFour.Exactly(0), cmp.simplify());
+    }
+
+    @Test
+    void simplifyDivOfMultiply() {
+        final TwentyFour.Compound mul =
+                new TwentyFour.Compound(
+                        new TwentyFour.Exactly(25),
+                        new TwentyFour.Exactly(4),
+                        TwentyFour.Operator.Mul);
+        final TwentyFour.Compound mul2 =
+                new TwentyFour.Compound(
+                        new TwentyFour.Exactly(4),
+                        new TwentyFour.Exactly(25),
+                        TwentyFour.Operator.Mul);
+
+        final TwentyFour.Compound div =
+                new TwentyFour.Compound(
+                        mul,
+                        new TwentyFour.Exactly(4),
+                        TwentyFour.Operator.Div);
+        final TwentyFour.Compound div2 =
+                new TwentyFour.Compound(
+                        mul2,
+                        new TwentyFour.Exactly(4),
+                        TwentyFour.Operator.Div);
+
+        assertEquals(new TwentyFour.Exactly(25), div.simplify());
+        assertEquals(new TwentyFour.Exactly(25), div2.simplify());
+    }
+
+    @Test
+    void simplifyMultiplyWithOneOnLeft()
+    {
+        // (* (+ {0} 16) 1)
+        final TwentyFour.Compound compound = new TwentyFour.Compound(
+                new TwentyFour.Exactly(24),
+                new TwentyFour.Compound(
+                        new TwentyFour.ReadInput(3),
+                        new TwentyFour.Exactly(4),
+                        Add
+                ),
+                Mul
+        );
+
+        final TwentyFour.Compound compoundTwo = new TwentyFour.Compound(
+                new TwentyFour.Compound(
+                        new TwentyFour.ReadInput(3),
+                        new TwentyFour.Exactly(4),
+                        Add
+                ),
+                new TwentyFour.Exactly(24),
+                Mul
+        );
+
+        final TwentyFour.Compound compoundThree = new TwentyFour.Compound(
+                new TwentyFour.Compound(
+                        new TwentyFour.Exactly(4),
+                        new TwentyFour.ReadInput(3),
+                        Add
+                ),
+                new TwentyFour.Exactly(24),
+                Mul
+        );
+
+        final TwentyFour.Compound compoundFour = new TwentyFour.Compound(
+                new TwentyFour.Compound(
+                        new TwentyFour.ReadInput(3),
+                        new TwentyFour.Exactly(4),
+                        Add
+                ),
+                new TwentyFour.Exactly(24),
+                Mul
+        );
+
+
+        final TwentyFour.Compound simpler = new TwentyFour.Compound(
+                new TwentyFour.Compound(
+                        new TwentyFour.Exactly(24),
+                        new TwentyFour.ReadInput(3),
+                        Mul),
+                new TwentyFour.Exactly(24 * 4),
+                Add
+        );
+
+        assertEquals(simpler, compound.simplify());
+        assertEquals(simpler, compoundTwo.simplify());
+        assertEquals(simpler, compoundThree.simplify());
+        assertEquals(simpler, compoundFour.simplify());
+    }
+
+//    @Test
+//    void simplifyMultiplyOfDiv() {
+//        final TwentyFour.Compound div =
+//                new TwentyFour.Compound(
+//                        new TwentyFour.ReadInput(4),
+//                        new TwentyFour.Exactly(4),
+//                        TwentyFour.Operator.Div);
+//
+//        final TwentyFour.Compound mul =
+//                new TwentyFour.Compound(
+//                        div,
+//                        new TwentyFour.Exactly(4),
+//                        TwentyFour.Operator.Mul);
+//
+//        assertEquals(
+//                new TwentyFour.Compound(
+//                        new TwentyFour.ReadInput(4),
+//                        new TwentyFour.Exactly(4),
+//                        TwentyFour.Operator.Rem
+//                ),
+//                mul.simplify()
+//        );
+//    }
 
     @Test
     void partOne() throws IOException {
