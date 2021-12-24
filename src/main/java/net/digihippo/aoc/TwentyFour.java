@@ -7,33 +7,139 @@ import java.util.Arrays;
 import java.util.List;
 
 public class TwentyFour {
+
+    public static final long[] X_OFF = {14, 11, 12, 11, -10, 15, -14, 10, -4, -3, 13, -3, -9, -12};
+    public static final long[] Y_OFF = {16, 3, 2, 7, 13, 6, 10, 11, 6, 5, 11, 4, 4, 6};
+    public static final long[] Z_DIV = {1, 1, 1, 1, 26, 1, 26, 1, 26, 26, 1, 26, 26, 26};
+
     public static long findLargestModelNumber(InputStream stream) throws IOException {
         final LazyAlu alu = prepareAlu(stream);
 
-        final int[] digits = new int[] {1, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9};
-
+        final int[] digits = new int[14];
         int count = 0;
 
-        for (int i = 0; i < 9; i++) {
-            int[] replace = new int[] {i, i, i, i, i, i, i, i};
-            final RegisterValue injected = alu.expressions[3].replace(replace);
-            System.out.println("min: " + injected.min() + ", max: " + injected.max());
+        for (int i = 1; i < 10; i++) {
+            Arrays.fill(digits, i);
+            final long injected = alu.expressions[3].evaluate(digits);
+            System.out.println("eval: " + injected + ", input: " + Arrays.toString(digits));
         }
-
-        while (digits[12] > 0) {
-            final long evaluate = alu.expressions[3].evaluate(digits);
-            System.out.println(count + ", " + evaluate + ", " + Arrays.toString(digits));
-            decrement(digits);
-            count++;
-
-            if (count % 1_000_000 == 0)
-            {
-                System.out.println("Done " + count + " " + Arrays.toString(digits));
-            }
-        }
-        
+//
+//        while (digits[12] > 0) {
+//            final long evaluate = alu.expressions[3].evaluate(digits);
+//            System.out.println(count + ", " + evaluate + ", " + Arrays.toString(digits));
+//            decrement(digits);
+//            count++;
+//
+//            if (count % 1_000_000 == 0)
+//            {
+//                System.out.println("Done " + count + " " + Arrays.toString(digits));
+//            }
+//        }
+//
         return 0;
     }
+
+    /*
+    inp w
+mul x 0
+add x z
+mod x 26
+div z 1
+add x 14
+eql x w
+eql x 0
+mul y 0
+add y 25
+mul y x
+add y 1
+mul z y
+mul y 0
+add y w
+add y 16
+mul y x
+add z y
+     */
+    int read(int i)
+    {
+        return 1;
+    }
+
+    public static long handRolled(long[] input, long[] xOff, long[] yOff, long[] zDiv)
+    {
+        /*
+        inp w
+mul x 0
+add x z
+mod x 26
+div z 1
+add x 14
+eql x w
+eql x 0
+mul y 0
+add y 25
+mul y x
+add y 1
+mul z y
+mul y 0
+add y w
+add y 16
+mul y x
+add z y
+         */
+        long z = 0;
+        for (int i = 0; i < 14; i++) {
+            if ((z % 26) != input[i] - xOff[i]) // eql x w, eql x 0
+            {
+                z /= zDiv[i]; // div z 1 (zDiv[i])
+                z *= 26; // mul y 0, add y 25, mul y x, add y 1, mul z y
+                z += (yOff[i] + input[i]); // mul y 0, add y w, add y 16 (yOff[i]), mul y x
+            }
+            else
+            {
+                z /= zDiv[i];
+            }
+        }
+
+        return z;
+    }
+
+    public static void main(String[] args)
+    {
+        long[] digits = {9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9};
+        int count = 0;
+        while (true)
+        {
+            boolean anyZero = false;
+            for (long digit : digits) {
+                if (digit == 0)
+                {
+                    anyZero = true;
+                    break;
+                }
+            }
+            if (!anyZero)
+            {
+                long result = TwentyFour.handRolled(
+                        digits,
+                        X_OFF,
+                        Y_OFF,
+                        Z_DIV
+                );
+                if (result == 0)
+                {
+                    System.out.println(Arrays.toString(digits));
+                    break;
+                }
+            }
+            decrement(digits);
+            count++;
+            if (count % 1_000_000 == 0)
+            {
+                System.out.println(count);
+            }
+        }
+    }
+
 
     public static long findLargestModelNumberEager(InputStream stream) throws IOException {
         final Alu alu = new Alu();
@@ -44,11 +150,16 @@ public class TwentyFour {
 //        final long biggest = 99992129102366L;
 
         int count = 0;
-        while (count < 10000) {
+        while (count < 1) {
+            int j = 1;
             alu.reset(Long.toString(biggest - count));
-            instructions.forEach(i -> i.execute(alu));
+            for (Instruction i : instructions) {
+                i.execute(alu);
+                System.out.println(j++ + ": " + Arrays.toString(alu.registers));
+            }
 
             System.out.println(count + ", " + alu.registers[3] + ", " + (biggest - count));
+            System.out.println();
 
             count++;
         }
@@ -64,7 +175,7 @@ public class TwentyFour {
         return alu;
     }
 
-    private static void decrement(int[] digits) {
+    private static void decrement(long[] digits) {
         for (int i = digits.length; i > 0; i--) {
             if (digits[i - 1] > 0L)
             {
@@ -161,10 +272,6 @@ public class TwentyFour {
             RegisterValue right,
             Operator operator)
     {
-        if (operator == Operator.Add && left.equals(new ReadInput(13)) && right.equals(new Exactly(6)))
-        {
-            System.out.println("Hmm");
-        }
         return new Compound(left, right, operator);
     }
 
@@ -294,7 +401,7 @@ public class TwentyFour {
             if (simplified != this) {
 //                System.out.println("Simplified:\n\t" + this + "\nto\n\t" + simplified + "\n");
             } else {
-                System.out.println("Unable to simplify:\n\t" + this);
+//                System.out.println("Unable to simplify:\n\t" + this);
             }
         }
 
@@ -604,7 +711,6 @@ public class TwentyFour {
         final LazyAlu lazyAlu = new LazyAlu();
         for (int j = 0; j < instructions.size(); j++) {
             Instruction i = instructions.get(j);
-            System.out.println("Executing instruction " + i);
             i.executeLazy(lazyAlu);
         }
 
