@@ -3,6 +3,7 @@ package net.digihippo.aoc;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 import static net.digihippo.aoc.TwentyFour.Operator.Add;
 import static net.digihippo.aoc.TwentyFour.Operator.Mul;
@@ -100,6 +101,27 @@ class TwentyFourTest {
                 "43"
         );
         assertEquals(registers[3], 1);
+    }
+
+    @Test
+    void bitTwiddling() throws IOException {
+        final String input = """
+                inp w
+                add z w
+                mod z 2
+                div w 2
+                add y w
+                mod y 2
+                div w 2
+                add x w
+                mod x 2
+                div w 2
+                mod w 2""";
+        final TwentyFour.LazyAlu lazyAlu = TwentyFour.prepareAlu(Inputs.asInputStream(input));
+        final TwentyFour.RegisterValue[] expressions = lazyAlu.expressions;
+        for (TwentyFour.RegisterValue expression : expressions) {
+            System.out.println(expression.evaluate(new int[] {4}));
+        }
     }
 
     @Test
@@ -414,6 +436,6 @@ class TwentyFourTest {
 
     @Test
     void partOne() throws IOException {
-//        System.out.println(TwentyFour.findLargestModelNumber(Inputs.puzzleInput("twentyfour.txt")));
+        System.out.println(TwentyFour.findLargestModelNumber(Inputs.puzzleInput("twentyfour.txt")));
     }
 }

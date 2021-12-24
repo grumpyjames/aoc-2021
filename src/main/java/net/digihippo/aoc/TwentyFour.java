@@ -8,23 +8,48 @@ import java.util.List;
 
 public class TwentyFour {
     public static long findLargestModelNumber(InputStream stream) throws IOException {
-        final List<Instruction> instructions = parse(stream);
+        final LazyAlu alu = prepareAlu(stream);
 
-        final Alu alu = new Alu();
-        long maximal = 999999999999999L;
-        long minimal = 100000000000000L;
+        final int[] digits = new int[] {9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9};
 
-        for (long i = minimal; i <= maximal; i++) {
-            final String input = Long.toString(i);
-            alu.reset(input);
-            instructions.forEach(inst -> inst.execute(alu));
-            if (alu.registers[3] == 0)
+        int count = 0;
+        while (digits[0] > 0) {
+            if (alu.expressions[3].evaluate(digits) == 0)
             {
-                System.out.println(i);
+                System.out.println(Arrays.toString(digits));
+            }
+            decrement(digits);
+            count++;
+
+            if (count % 1_000_000 == 0)
+            {
+                System.out.println("Done " + count + " " + Arrays.toString(digits));
             }
         }
         
         return 0;
+    }
+
+    public static LazyAlu prepareAlu(InputStream stream) throws IOException {
+        final List<Instruction> instructions = parse(stream);
+
+        final LazyAlu alu = new LazyAlu();
+        instructions.forEach(i -> i.executeLazy(alu));
+        return alu;
+    }
+
+    private static void decrement(int[] digits) {
+        for (int i = digits.length; i > 0; i--) {
+            if (digits[i - 1] > 0L)
+            {
+                digits[i - 1] = digits[i - 1] - 1;
+                for (int j = i; j < digits.length; j++)
+                {
+                    digits[j] = 9;
+                }
+                return;
+            }
+        }
     }
 
     sealed interface RegisterValue permits Compound, Exactly, ReadInput {
@@ -33,7 +58,6 @@ public class TwentyFour {
         void printTo(PrintStream ps, int depth);
 
         long max();
-
         long min();
     }
 
@@ -91,6 +115,18 @@ public class TwentyFour {
         }
     }
 
+    static Compound newCompound(
+            RegisterValue left,
+            RegisterValue right,
+            Operator operator)
+    {
+        if (operator == Operator.Add && left.equals(new ReadInput(13)) && right.equals(new Exactly(6)))
+        {
+            System.out.println("Hmm");
+        }
+        return new Compound(left, right, operator);
+    }
+
     record Compound(
             RegisterValue left,
             RegisterValue right,
@@ -123,13 +159,13 @@ public class TwentyFour {
                 }
                 case Mul -> {
                     // We don't know - signs could screw us.
-                    return Long.MAX_VALUE;
+                    return Math.abs(left.max() * right.max());
                 }
                 case Div -> {
                     return left.max();
                 }
                 case Mod -> {
-                    return right.max() - 1;
+                    return Math.min(left.max(), right.max() - 1);
                 }
                 case Eq -> {
                     return 1L;
@@ -149,11 +185,9 @@ public class TwentyFour {
                     return left.min() + right.min();
                 }
                 case Mul -> {
-                    // We don't know - signs could screw us.
-                    return Long.MIN_VALUE;
+                    return -(left.max() + right.max());
                 }
                 case Div -> {
-                    // Could try harder here
                     return 0L;
                 }
                 case Mod -> {
@@ -261,15 +295,15 @@ public class TwentyFour {
                                 switch (c.right)
                                 {
                                     case Exactly e2:
-                                        return new Compound(
-                                                new Compound(e, c.left, Operator.Mul),
+                                        return newCompound(
+                                                newCompound(e, c.left, Operator.Mul),
                                                 new Exactly(e2.value * e.value),
                                                 Operator.Add
                                         );
                                     default:
                                         return switch (c.left) {
-                                            case Exactly e3 -> new Compound(
-                                                    new Compound(e, c.right, Operator.Mul),
+                                            case Exactly e3 -> newCompound(
+                                                    newCompound(e, c.right, Operator.Mul),
                                                     new Exactly(e3.value * e.value),
                                                     Operator.Add
                                             );
@@ -285,14 +319,14 @@ public class TwentyFour {
                         case Exactly e:
                             if (c.operator == Operator.Add) {
                                 return switch (c.right) {
-                                    case Exactly e2 -> new Compound(
-                                            new Compound(e, c.left, Operator.Mul),
+                                    case Exactly e2 -> newCompound(
+                                            newCompound(e, c.left, Operator.Mul),
                                             new Exactly(e2.value * e.value),
                                             Operator.Add
                                     );
                                     default -> switch (c.left) {
-                                        case Exactly e3 -> new Compound(
-                                                new Compound(e, c.right, Operator.Mul),
+                                        case Exactly e3 -> newCompound(
+                                                newCompound(e, c.right, Operator.Mul),
                                                 new Exactly(e3.value * e.value),
                                                 Operator.Add
                                         );
@@ -324,12 +358,12 @@ public class TwentyFour {
 //                            {
 //                                if (c.right.equals(this.left))
 //                                {
-//                                    return new Compound(c.left, c.right, Operator.Rem);
+//                                    return newCompound(c.left, c.right, Operator.Rem);
 //                                }
 //
 //                                if (c.right.equals(this.right))
 //                                {
-//                                    return new Compound(c.left, c.right, Operator.Rem);
+//                                    return newCompound(c.left, c.right, Operator.Rem);
 //                                }
 //                            }
 //                        default:
@@ -339,10 +373,10 @@ public class TwentyFour {
 //                    if (c.operator == Operator.Div)
 //                    {
 //                        if (c.right.equals(this.left)) {
-//                            return new Compound(c.left, c.right, Operator.Rem);
+//                            return newCompound(c.left, c.right, Operator.Rem);
 //                        }
 //                        if (c.right.equals(this.right)) {
-//                            return new Compound(c.left, c.right, Operator.Rem);
+//                            return newCompound(c.left, c.right, Operator.Rem);
 //                        }
 //                    }
 //                    return this;
@@ -403,9 +437,9 @@ public class TwentyFour {
             if (operator == Operator.Add)
             {
                 return switch (left) {
-                    case Exactly e -> new Compound(new Exactly(e.value + value), right, operator);
+                    case Exactly e -> newCompound(new Exactly(e.value + value), right, operator);
                     default -> switch (right) {
-                        case Exactly f -> new Compound(left, new Exactly(f.value + value), operator);
+                        case Exactly f -> newCompound(left, new Exactly(f.value + value), operator);
                         default -> orElse;
                     };
                 };
@@ -473,9 +507,9 @@ public class TwentyFour {
         long execute(long one, long two);
     }
 
-    private static final class LazyAlu
+    static final class LazyAlu
     {
-        private final RegisterValue[] expressions = new RegisterValue[] {
+        final RegisterValue[] expressions = new RegisterValue[] {
                 new Exactly(0), new Exactly(0), new Exactly(0), new Exactly(0)
         };
         private int inputIndex = 0;
@@ -495,7 +529,7 @@ public class TwentyFour {
                             final RegisterValue regVTwo = expressions[another.register];
                             switch (regVTwo) {
                                 case Exactly e2 -> expressions[register] = new Exactly(o.execute(e.value, e2.value));
-                                default -> expressions[register] = new Compound(rv, regVTwo, o).simplify();
+                                default -> expressions[register] = newCompound(rv, regVTwo, o).simplify();
                             }
                         }
                     }
@@ -516,7 +550,7 @@ public class TwentyFour {
                 case Register r -> expressions[r.register];
             };
 
-            return new Compound(left, rvTwo, operator).simplify();
+            return newCompound(left, rvTwo, operator).simplify();
         }
     }
 
