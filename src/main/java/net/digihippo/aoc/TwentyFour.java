@@ -176,48 +176,72 @@ add z y
       z_03 = (z_02 % 26 == input[2] - 12)  ? z_02 / 1  : input[2]  + 2 + (26 * z_02/1)
       z_02 = (z_01 % 26 == input[1] - 11)  ? z_01 / 1  : input[1]  + 3 + (26 * z_01/1)
       z_01 = (z_00 % 26 == input[0] - 14)  ? z_00 / 1  : input[0]  + 16 + (26 * z_00/1)
-                0  1  2  3  4  5  6  7  8  9 10 11 12 13
-      inputs = [5, 9, 9, 9, 6, 9, 1, 2, 9, 8, 1, 9, 3, 9]
-      59996912981939
 
       z_14 = (input[0] + 16 % 26 == input[13] + 12) ? z_13 / 26 : input[13] + 6 + (26 * z_13/26)
              let's try it, input[0] = 5, input[13] = 9
            = z_13 / 26
            = 0
+           what if we just break _this_ condition ?
+           = input[13] + 6 + (26 * (16 + input[0])/26) => still impossible.
+
+           false tree
+           = input[13] + 6 + (26 * z_13/26)
+           = input[13] + 6 + 26(input[9] + 5 + 26(input[6] + 10 + 26(input[4] + 13 + 26(input[2] + 2 + 26(input[1] + 3 + 26(16 + input[0])/1)))))
 
       z_13 = (z_12 % 26 == input[12] + 9)  ? z_12 / 26 : input[12] + 4 + (26 * z_12/26)
            = input[1] + 3 % 26 == input[12] + 9 ? z_12 / 26 : input[12] + 4 + (26 * z_12/26)
              doable, pick input[1] = 9, input[12] = 3
            = z_12 / 26
            = 16 + input[0]
+           false tree
+             => input[11] + 4 % 26 != input[12] + 9
+           = input[12] + 4 + (26 * z_12/26)
+           = input[12] + 4 + 26(input[9] + 5 + 26(input[6] + 10 + 26(input[4] + 13 + 26(input[2] + 2 + 26(input[1] + 3 + 26(16 + input[0])/1)))))
 
       z_12 = (z_11 % 26 == input[11] + 3)  ? z_11 / 26 : input[11] + 4 + (26 * z_11/26)
            = (input[10] + 11 % 26) == input[11] + 3 ? z_11 / 26 : input[11] + 4 + (26 * z_11/26)
              Doable - let's try it. input[10] = 1 and input[11] = 9
            = z_11 / 26
            = input[1] + 3 + 26(16 + input[0])
-
+           false tree
+             => input[10] + 11 != input[11] + 3
+           = input[11] + 4 + (26 * z_11/26)
+           = input[11] + 4 + 26(input[9] + 5 + 26(input[6] + 10 + 26(input[4] + 13 + 26(input[2] + 2 + 26(input[1] + 3 + 26(16 + input[0])/1)))))
 
       z_11 = (z_10 % 26 == input[10] - 13) ? z_10 / 1  : input[10] + 11 + (26 * z_10/1)
            = input[1] + 3 % 26 == input[10] - 13 ? z_10 / 1  : input[10] + 11 + (26 * z_10/1)
            = false ? <w/e> : input[10] + 11 + (26 * z_10/1)
            = input[10] + 11 + 26(input[1] + 3 + 26(16 + input[0]))
+           false tree
+           = input[10] + 11 + (26 * z_10/1)
+           = input[10] + 11 + 26(input[9] + 5 + 26(input[6] + 10 + 26(input[4] + 13 + 26(input[2] + 2 + 26(input[1] + 3 + 26(16 + input[0])/1)))))
 
       z_10 = (z_09 % 26 == input[9] + 3)   ? z_09 / 26 : input[9]  + 5 + (26 * z_09/26)
            = (input[2] + 2 % 26 == input[9] + 3) ? z_09 / 26 : input[9]  + 5 + (26 * z_09/26)
              Again, let's try the true case input[2] = 9, input[9] = 8
            = z_09 / 26
            = input[1] + 3 + 26(16 + input[0])
+           false tree
+             => input[8] + 6 !=  input[9] + 3
+           = input[9] + 5 + 26(input[6] + 10 + 26(input[4] + 13 + 26(input[2] + 2 + 26(input[1] + 3 + 26(16 + input[0])/1))))
 
       z_09 = (z_08 % 26 == input[8] + 4)   ? z_08 / 26 : input[8]  + 6 + (26 * z_08/26)
            = (input[7] + 11 % 26 == input[8] + 4) ? z_08 / 26 : input[8]  + 6 + (26 * z_08/26)
              pick the true case: input[7] = 2, input[8] = 9
            = z_08 / 26
            = input[2] + 2 + 26(input[1] + 3 + 26(16 + input[0])/1)
+           false tree
+             => input[7] + 11 != input[8] + 4
+           = input[8] + 6 + (26 * z_08/26)
+           = input[8] + 6 + 26(input[6] + 10 + 26(input[4] + 13 + 26(input[2] + 2 + 26(input[1] + 3 + 26(16 + input[0])/1))))
 
       z_08 = (input[2] + 2 % 26 == input[7] - 10)  ? z_07 / 1 : input[7]   + 11 + (26 * z_07/1)
            = false ? <w/e> : input[7]   + 11 + (26 * z_07/1)
            = input[7] + 11 + 26(input[2] + 2 + 26(input[1] + 3 + 26(16 + input[0])/1))
+           false tree
+           = input[7] + 11 + (26 * z_07/1)
+           = input[7] + 11 + 26(input[6] + 10 + 26(input[4] + 13 + 26(input[2] + 2 + 26(input[1] + 3 + 26(16 + input[0])/1))))
+
 
       z_07 = (z_06 % 26 == input[6] + 14)  ? z_06 / 26 : input[6]  + 10 + (26 * z_06/26)
            = (input[5] + 6 % 26) == input[6] + 14 ? z_06 / 26 : input[6]  + 10 + (26 * z_06/26)
@@ -226,11 +250,21 @@ add z y
            = (input[2] + 2 + 26(input[1] + 3 + 26(16 + input[0])/1))
            Lost input[6] and input[5], brilliant
            Set input[5] = 9  and input[6] = 1
+           and the false tree
+             => input[5] + 6 != input[6] + 14
+           = input[6]  + 10 + (26 * z_06/26)
+           = input[6] + 10 + 26(input[4] + 13 + 26(input[2] + 2 + 26(input[1] + 3 + 26(16 + input[0])/1)))
+
 
       z_06 = (z_05 % 26 == input[5] - 15)  ? z_05 / 1  : input[5]  + 6 + (26 * z_05/1)
            = (input[2] + 2) % 26 == input[5] - 15 ? z_05 / 1  : input[5]  + 6 + (26 * z_05/1)
            = false ? w/e : input[5] + 6 + 26((input[2] + 2 + 26(input[1] + 3 + 26(16 + input[0])/1)))
            = input[5] + 6 + 26((input[2] + 2 + 26(input[1] + 3 + 26(16 + input[0])/1)))
+           false tree
+           = (z_05 % 26 == input[5] - 15)  ? z_05 / 1  : input[5]  + 6 + (26 * z_05/1)
+           = (input[4]  + 13 % 26) == input[5] - 15 ? z_05 / 1  : input[5]  + 6 + (26 * z_05/1)
+           = false ? <w/e> : input[5]  + 6 + (26 * z_05/1)
+           = input[5] + 6 + 26(input[4] + 13 + 26(input[2] + 2 + 26(input[1] + 3 + 26(16 + input[0])/1)))
 
       z_05 = (z_04 % 26 == input[4] + 10)  ? z_04 / 26 : input[4]  + 13 + (26 * z_04/26)
            = input[3] + 7 == input[4] + 10 ? z_04 / 26 : input[4]  + 13 + (26 * z_04/26)
@@ -238,6 +272,10 @@ add z y
              z_04 / 26 -> this is (input[2] + 2 + 26(input[1] + 3 + 26(16 + input[0])/1))
              We've lost input[4] _and_ input[3]. What a win!
              So set input[3] = 9 and input[4] = 6
+             and the false case
+             => input[3] + 7 != input[4] + 10
+           = input[4] + 13 + (26 * z_04/26)
+           = input[4] + 13 + 26(input[2] + 2 + 26(input[1] + 3 + 26(16 + input[0])/1))
 
       z_04 = (z_03 % 26 == input[3] - 11)  ? z_03 / 1  : input[3]  + 7 + (26 * z_03)
            = ((input[2] + 2) % 26 == input[3] - 11) ? (input[2] + 10896 + (26 * input[1]) + (676 * input[0])) / 1  : input[3]  + 7 + (26 * (input[2] + 10896 + (26 * input[1]) + (676 * input[0]))/1)
@@ -259,21 +297,31 @@ add z y
 
       insert z_00 = 0
 
-      input[3] = 9 and input[4] = 6
-        [4] = [3] - 6
-
-      input[5] = 9 and input[6] = 1
-
-      input[7] = 2 and input[8] = 9
-
-      input[10] = 1 and input[11] = 9
-
-      input[1] = 9 and input[12] = 3
-
       input[0] = 5 and input[13] = 9
+       => input[0] = 1 and input[13] = 5
+      input[1] = 9 and input[12] = 3
+       => input[1] = 7 and input[12] = 1
+      input[2] = 9, input[9] = 8
+       => input[2] = 2 and input[9] = 1
+      input[3] = 9 and input[4] = 6
+       => input[3] = 4 and input[4] = 1
+      input[5] = 9 and input[6] = 1
+       => input[5] = 9 and input[6] = 1
+      input[7] = 2 and input[8] = 9
+       => input[7] = 1 and input[8] = 8
+      input[10] = 1 and input[11] = 9
+       => input[10] = 1 and input[11] = 9
 
                 0  1  2  3  4  5  6  7  8  9 10 11 12 13
-      inputs = [1, 7, 9, 4, 1, 9, 1, 1, 8, 8, 1, 9, 1, 5]
+      inputs = [5, 9, 9, 9, 6, 9, 1, 2, 9, 8, 1, 9, 3, 9]
+      59996912981939
+
+                0  1  2  3  4  5  6  7  8  9 10 11 12 13
+      inputs = [1, 7, 2, 4, 1, 9, 1, 1, 8, 1, 1, 9, 1, 5]
+      17241911811915
+
+      17241191811915
+
       17941911881915
 
 
@@ -331,7 +379,7 @@ add z y
         final List<Instruction> instructions = parse(stream);
 
 //      17941911881915
-        final long biggest = 17941911881915L;
+        final long biggest = 17241911811915L;
 //        final long biggest = 99992129102366L;
 
         int count = 0;
@@ -350,6 +398,38 @@ add z y
         }
 
         return 0;
+    }
+
+    public static long findSmallestModelNumberEager(InputStream stream) throws IOException {
+        final Alu alu = new Alu();
+        final List<Instruction> instructions = parse(stream);
+
+//      17941911881915
+        final long smallest = 11111111111111L;
+//        final long biggest = 99992129102366L;
+
+        int count = 0;
+        while (true) {
+            long candidate = smallest + count;
+            String input = Long.toString(candidate);
+            if (input.indexOf('0') != -1) {
+                alu.reset(input);
+                for (Instruction i : instructions) {
+                    i.execute(alu);
+                }
+
+                if (alu.registers[3] == 0)
+                {
+                    System.out.println("Solution: " + smallest + count);
+                }
+
+                if (count % 1_000_000 == 0) {
+                    System.out.println(count + ", " + alu.registers[3] + ", " + candidate);
+                    System.out.println();
+                }
+            }
+            count++;
+        }
     }
 
     public static LazyAlu prepareAlu(InputStream stream) throws IOException {

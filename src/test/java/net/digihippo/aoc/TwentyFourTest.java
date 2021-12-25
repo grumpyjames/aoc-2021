@@ -552,4 +552,18 @@ class TwentyFourTest {
             System.out.println(Arrays.toString(digits));
         }
     }
+
+    @Test
+    void meh() throws IOException {
+        // Want: 0 == input[13] + 6 + 26(input[9] + 5 + 26(input[6] + 10 + 26(input[4] + 13 + 26(input[2] + 2 + 26(input[1] + 3 + 26(16 + input[0]))))))
+        //   that's impossible.
+        // and also:
+        // input[11] - 5 != input[12]
+        // input[10] + 8 != input[11]
+        // input[8]  + 3 != input[9]
+        // input[7]  + 7 != input[8]
+        // input[5]  - 8 != input[6]
+        // input[3]  - 3 != input[4]
+        TwentyFour.findSmallestModelNumberEager(Inputs.puzzleInput("twentyfour.txt"));
+    }
 }
