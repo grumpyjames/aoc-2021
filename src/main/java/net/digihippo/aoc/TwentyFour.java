@@ -7,11 +7,6 @@ import java.util.Arrays;
 import java.util.List;
 
 public class TwentyFour {
-
-    public static final long[] X_OFF = {14, 11, 12, 11, -10, 15, -14, 10, -4, -3, 13, -3, -9, -12};
-    public static final long[] Y_OFF = {16, 3, 2, 7, 13, 6, 10, 11, 6, 5, 11, 4, 4, 6};
-    public static final long[] Z_DIV = {1, 1, 1, 1, 26, 1, 26, 1, 26, 26, 1, 26, 26, 26};
-
     public static long findLargestModelNumber(InputStream stream) throws IOException {
         final LazyAlu alu = prepareAlu(stream);
 
@@ -90,9 +85,7 @@ add z y
         for (int i = 0; i < 14; i++) {
             if ((z % 26) != input[i] - xOff[i]) // eql x w, eql x 0
             {
-                z /= zDiv[i]; // div z 1 (zDiv[i])
-                z *= 26; // mul y 0, add y 25, mul y x, add y 1, mul z y
-                z += (yOff[i] + input[i]); // mul y 0, add y w, add y 16 (yOff[i]), mul y x
+                z = 26 * (z / zDiv[i]) + (yOff[i] + input[i]); // mul y 0, add y 25, mul y x, add y 1, div z 1 (zDiv[i]), mul z y mul y 0, add y w, add y 16 (yOff[i]), mul y x
             }
             else
             {
@@ -103,10 +96,35 @@ add z y
         return z;
     }
 
+    /*
+      z_14 = (z_13 == input[13] + 12) ? z_13 / 26 : input[13] + 6 + (26 * z_13/26)
+      z_13 = (z_12 == input[12] + 9)  ? z_12 / 26 : input[12] + 4 + (26 * z_12/26)
+      z_12 = (z_11 == input[11] + 3)  ? z_11 / 26 : input[11] + 6 + (26 * z_11/26)
+      z_11 = (z_10 == input[10] - 13) ? z_10 / 1  : input[10] + 6 + (26 * z_10/1)
+      z_10 = (z_09 == input[9] + 3)   ? z_09 / 26 : input[9]  + 6 + (26 * z_09/26)
+      z_09 = (z_08 == input[8] + 4)   ? z_08 / 26 : input[8]  + 6 + (26 * z_08/26)
+      z_08 = (z_07 == input[7] - 10)  ? z_07 / 1 : input[7]   + 6 + (26 * z_07/1)
+      z_07 = (z_06 == input[6] + 14)  ? z_06 / 26 : input[6]  + 6 + (26 * z_06/26)
+      z_06 = (z_05 == input[5] - 15)  ? z_05 / 1  : input[5]  + 6 + (26 * z_05/1)
+      z_05 = (z_04 == input[4] + 10)  ? z_04 / 26 : input[4]  + 6 + (26 * z_04/26)
+      z_04 = (z_03 == input[3] - 11)  ? z_03 / 1  : input[3]  + 6 + (26 * z_03/1)
+      z_03 = (z_02 == input[2] - 12)  ? z_02 / 1  : input[2]  + 6 + (26 * z_02/1)
+      z_02 = (z_01 == input[1] - 11)  ? z_01 / 1  : input[1]  + 6 + (26 * z_01/1)
+      z_01 = (z_00 == input[0] - 14)  ? z_00 / 1  : input[0]  + 6 + (26 * z_00/1)
+
+
+
+     */
+
+    public static final long[] X_OFF = {14, 11, 12, 11, -10, 15, -14, 10, -4, -3, 13, -3, -9, -12};
+    public static final long[] Y_OFF = {16, 3, 2, 7, 13, 6, 10, 11, 6, 5, 11, 4, 4, 6};
+    public static final long[] Z_DIV = {1, 1, 1, 1, 26, 1, 26, 1, 26, 26, 1, 26, 26, 26};
+
+
     public static void main(String[] args)
     {
         long[] digits = {9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9};
-        int count = 0;
+        long count = 0;
         while (true)
         {
             boolean anyZero = false;
@@ -133,9 +151,9 @@ add z y
             }
             decrement(digits);
             count++;
-            if (count % 1_000_000 == 0)
+            if (count % 10_000_000 == 0)
             {
-                System.out.println(count);
+                System.out.println(count + " " + Arrays.toString(digits));
             }
         }
     }

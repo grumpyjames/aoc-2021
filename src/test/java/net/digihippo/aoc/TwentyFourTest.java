@@ -525,7 +525,7 @@ class TwentyFourTest {
 
     @Test
     void handRolled() {
-        System.out.println(TwentyFour.handRolled(
+        assertEquals(7870897543L, TwentyFour.handRolled(
                 new long[] {9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9},
                 new long[] {14, 11, 12, 11, -10, 15, -14, 10, -4, -3, 13, -3, -9, -12},
                 new long[] {16, 3, 2, 7, 13, 6, 10, 11, 6, 5, 11, 4, 4, 6},
