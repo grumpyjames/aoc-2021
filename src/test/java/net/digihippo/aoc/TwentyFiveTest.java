@@ -123,4 +123,9 @@ class TwentyFiveTest {
                 ....v..v.>""";
         assertEquals(58, TwentyFive.stepCount(Inputs.asInputStream(input)));
     }
+
+    @Test
+    void partOne() throws IOException {
+        System.out.println(TwentyFive.stepCount(Inputs.puzzleInput("twentyfive.txt")));
+    }
 }
