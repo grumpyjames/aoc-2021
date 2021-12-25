@@ -80,38 +80,201 @@ add y w
 add y 16
 mul y x
 add z y
+
+Given z_0 = 0,
+  z_01 = (16 + input[0])
+
+
          */
         long z = 0;
         for (int i = 0; i < 14; i++) {
             if ((z % 26) != input[i] - xOff[i]) // eql x w, eql x 0
             {
-                z = 26 * (z / zDiv[i]) + (yOff[i] + input[i]); // mul y 0, add y 25, mul y x, add y 1, div z 1 (zDiv[i]), mul z y mul y 0, add y w, add y 16 (yOff[i]), mul y x
+                long interim = 26 * (z / zDiv[i]); // This is either 26z, or z to the nearest multiple of 26.
+                z = interim + (yOff[i] + input[i]); // mul y 0, add y 25, mul y x, add y 1, div z 1 (zDiv[i]), mul z y mul y 0, add y w, add y 16 (yOff[i]), mul y x
             }
             else
             {
-                z /= zDiv[i];
+                z /= zDiv[i]; // This is either z or z to the nearest multiple of 26.
             }
         }
 
         return z;
     }
 
-    /*
-      z_14 = (z_13 == input[13] + 12) ? z_13 / 26 : input[13] + 6 + (26 * z_13/26)
-      z_13 = (z_12 == input[12] + 9)  ? z_12 / 26 : input[12] + 4 + (26 * z_12/26)
-      z_12 = (z_11 == input[11] + 3)  ? z_11 / 26 : input[11] + 6 + (26 * z_11/26)
-      z_11 = (z_10 == input[10] - 13) ? z_10 / 1  : input[10] + 6 + (26 * z_10/1)
-      z_10 = (z_09 == input[9] + 3)   ? z_09 / 26 : input[9]  + 6 + (26 * z_09/26)
-      z_09 = (z_08 == input[8] + 4)   ? z_08 / 26 : input[8]  + 6 + (26 * z_08/26)
-      z_08 = (z_07 == input[7] - 10)  ? z_07 / 1 : input[7]   + 6 + (26 * z_07/1)
-      z_07 = (z_06 == input[6] + 14)  ? z_06 / 26 : input[6]  + 6 + (26 * z_06/26)
-      z_06 = (z_05 == input[5] - 15)  ? z_05 / 1  : input[5]  + 6 + (26 * z_05/1)
-      z_05 = (z_04 == input[4] + 10)  ? z_04 / 26 : input[4]  + 6 + (26 * z_04/26)
-      z_04 = (z_03 == input[3] - 11)  ? z_03 / 1  : input[3]  + 6 + (26 * z_03/1)
-      z_03 = (z_02 == input[2] - 12)  ? z_02 / 1  : input[2]  + 6 + (26 * z_02/1)
-      z_02 = (z_01 == input[1] - 11)  ? z_01 / 1  : input[1]  + 6 + (26 * z_01/1)
-      z_01 = (z_00 == input[0] - 14)  ? z_00 / 1  : input[0]  + 6 + (26 * z_00/1)
+    public static long handRolledRec(int inputIndex, long[] input, long[] xOff, long[] yOff, long[] zDiv)
+    {
+        /*
+        inp w
+mul x 0
+add x z
+mod x 26
+div z 1
+add x 14
+eql x w
+eql x 0
+mul y 0
+add y 25
+mul y x
+add y 1
+mul z y
+mul y 0
+add y w
+add y 16
+mul y x
+add z y
+         */
+        long z = 0;
+        if (inputIndex == 0)
+        {
+            return computeZ(0, input[inputIndex], inputIndex, xOff, yOff, zDiv);
+        }
+        else
+        {
+            long prevZ = handRolledRec(inputIndex - 1, input, xOff, yOff, zDiv);
+            return computeZ(
+                    prevZ,
+                    input[inputIndex],
+                    inputIndex,
+                    xOff,
+                    yOff,
+                    zDiv
+            );
+        }
+    }
 
+    static long computeZ(long z, long input, int i, long[] xOff, long[] yOff, long[] zDiv)
+    {
+        // Either z was 0 already OR
+        // z % 26 == (input[i] - xOff[i]) =>
+        //
+
+        if ((z % 26) != input - xOff[i]) // eql x w, eql x 0
+        {
+            return 26 * (z / zDiv[i]) + (yOff[i] + input); // mul y 0, add y 25, mul y x, add y 1, div z 1 (zDiv[i]), mul z y mul y 0, add y w, add y 16 (yOff[i]), mul y x
+        }
+        else
+        {
+            return z / zDiv[i];
+        }
+    }
+
+    /*
+      13, 12, 11, 9, 8, 4
+
+      z_14 = (z_13 % 26 == input[13] + 12) ? z_13 / 26 : input[13] + 6 + (26 * z_13/26)
+      z_13 = (z_12 % 26 == input[12] + 9)  ? z_12 / 26 : input[12] + 4 + (26 * z_12/26)
+      z_12 = (z_11 % 26 == input[11] + 3)  ? z_11 / 26 : input[11] + 4 + (26 * z_11/26)
+      z_11 = (z_10 % 26 == input[10] - 13) ? z_10 / 1  : input[10] + 11 + (26 * z_10/1)
+      z_10 = (z_09 % 26 == input[9] + 3)   ? z_09 / 26 : input[9]  + 5 + (26 * z_09/26)
+      z_09 = (z_08 % 26 == input[8] + 4)   ? z_08 / 26 : input[8]  + 6 + (26 * z_08/26)
+      z_08 = (z_07 % 26 == input[7] - 10)  ? z_07 / 1 : input[7]   + 11 + (26 * z_07/1)
+      z_07 = (z_06 % 26 == input[6] + 14)  ? z_06 / 26 : input[6]  + 10 + (26 * z_06/26)
+      z_06 = (z_05 % 26 == input[5] - 15)  ? z_05 / 1  : input[5]  + 6 + (26 * z_05/1)
+      z_05 = (z_04 % 26 == input[4] + 10)  ? z_04 / 26 : input[4]  + 13 + (26 * z_04/26)
+      z_04 = (z_03 % 26 == input[3] - 11)  ? z_03 / 1  : input[3]  + 7 + (26 * z_03/1)
+      z_03 = (z_02 % 26 == input[2] - 12)  ? z_02 / 1  : input[2]  + 2 + (26 * z_02/1)
+      z_02 = (z_01 % 26 == input[1] - 11)  ? z_01 / 1  : input[1]  + 3 + (26 * z_01/1)
+      z_01 = (z_00 % 26 == input[0] - 14)  ? z_00 / 1  : input[0]  + 16 + (26 * z_00/1)
+                0  1  2  3  4  5  6  7  8  9 10 11 12 13
+      inputs = [5, 9, 9, 9, 6, 9, 1, 2, 9, 8, 1, 9, 3, 9]
+      59996912981939
+
+      z_14 = (input[0] + 16 % 26 == input[13] + 12) ? z_13 / 26 : input[13] + 6 + (26 * z_13/26)
+             let's try it, input[0] = 5, input[13] = 9
+           = z_13 / 26
+           = 0
+
+      z_13 = (z_12 % 26 == input[12] + 9)  ? z_12 / 26 : input[12] + 4 + (26 * z_12/26)
+           = input[1] + 3 % 26 == input[12] + 9 ? z_12 / 26 : input[12] + 4 + (26 * z_12/26)
+             doable, pick input[1] = 9, input[12] = 3
+           = z_12 / 26
+           = 16 + input[0]
+
+      z_12 = (z_11 % 26 == input[11] + 3)  ? z_11 / 26 : input[11] + 4 + (26 * z_11/26)
+           = (input[10] + 11 % 26) == input[11] + 3 ? z_11 / 26 : input[11] + 4 + (26 * z_11/26)
+             Doable - let's try it. input[10] = 1 and input[11] = 9
+           = z_11 / 26
+           = input[1] + 3 + 26(16 + input[0])
+
+
+      z_11 = (z_10 % 26 == input[10] - 13) ? z_10 / 1  : input[10] + 11 + (26 * z_10/1)
+           = input[1] + 3 % 26 == input[10] - 13 ? z_10 / 1  : input[10] + 11 + (26 * z_10/1)
+           = false ? <w/e> : input[10] + 11 + (26 * z_10/1)
+           = input[10] + 11 + 26(input[1] + 3 + 26(16 + input[0]))
+
+      z_10 = (z_09 % 26 == input[9] + 3)   ? z_09 / 26 : input[9]  + 5 + (26 * z_09/26)
+           = (input[2] + 2 % 26 == input[9] + 3) ? z_09 / 26 : input[9]  + 5 + (26 * z_09/26)
+             Again, let's try the true case input[2] = 9, input[9] = 8
+           = z_09 / 26
+           = input[1] + 3 + 26(16 + input[0])
+
+      z_09 = (z_08 % 26 == input[8] + 4)   ? z_08 / 26 : input[8]  + 6 + (26 * z_08/26)
+           = (input[7] + 11 % 26 == input[8] + 4) ? z_08 / 26 : input[8]  + 6 + (26 * z_08/26)
+             pick the true case: input[7] = 2, input[8] = 9
+           = z_08 / 26
+           = input[2] + 2 + 26(input[1] + 3 + 26(16 + input[0])/1)
+
+      z_08 = (input[2] + 2 % 26 == input[7] - 10)  ? z_07 / 1 : input[7]   + 11 + (26 * z_07/1)
+           = false ? <w/e> : input[7]   + 11 + (26 * z_07/1)
+           = input[7] + 11 + 26(input[2] + 2 + 26(input[1] + 3 + 26(16 + input[0])/1))
+
+      z_07 = (z_06 % 26 == input[6] + 14)  ? z_06 / 26 : input[6]  + 10 + (26 * z_06/26)
+           = (input[5] + 6 % 26) == input[6] + 14 ? z_06 / 26 : input[6]  + 10 + (26 * z_06/26)
+           let's try the true case
+           = z_06 / 26
+           = (input[2] + 2 + 26(input[1] + 3 + 26(16 + input[0])/1))
+           Lost input[6] and input[5], brilliant
+           Set input[5] = 9  and input[6] = 1
+
+      z_06 = (z_05 % 26 == input[5] - 15)  ? z_05 / 1  : input[5]  + 6 + (26 * z_05/1)
+           = (input[2] + 2) % 26 == input[5] - 15 ? z_05 / 1  : input[5]  + 6 + (26 * z_05/1)
+           = false ? w/e : input[5] + 6 + 26((input[2] + 2 + 26(input[1] + 3 + 26(16 + input[0])/1)))
+           = input[5] + 6 + 26((input[2] + 2 + 26(input[1] + 3 + 26(16 + input[0])/1)))
+
+      z_05 = (z_04 % 26 == input[4] + 10)  ? z_04 / 26 : input[4]  + 13 + (26 * z_04/26)
+           = input[3] + 7 == input[4] + 10 ? z_04 / 26 : input[4]  + 13 + (26 * z_04/26)
+           = don't know! Let's examine the true case:
+             z_04 / 26 -> this is (input[2] + 2 + 26(input[1] + 3 + 26(16 + input[0])/1))
+             We've lost input[4] _and_ input[3]. What a win!
+             So set input[3] = 9 and input[4] = 6
+
+      z_04 = (z_03 % 26 == input[3] - 11)  ? z_03 / 1  : input[3]  + 7 + (26 * z_03)
+           = ((input[2] + 2) % 26 == input[3] - 11) ? (input[2] + 10896 + (26 * input[1]) + (676 * input[0])) / 1  : input[3]  + 7 + (26 * (input[2] + 10896 + (26 * input[1]) + (676 * input[0]))/1)
+           = (false) : <w/e> : input[3] + 7 + (26 * z_03)
+           = input[3] + 7 + 26((input[2] + 2 + 26(input[1] + 3 + 26(16 + input[0])/1)))
+      z_03 = (z_02 % 26 == input[2] - 12)  ? z_02 / 1  : input[2]  + 2 + (26 * z_02/1)
+           = (input[1] + 3 % 26 == input[2] - 12)  ? (input[1] + (419 + 26 * input[0])) / 1  : input[2]  + 2 + (26 * (input[1] + (419 + 26 * input[0]))/1)
+           = false ? <w/e> : input[2] + 2 + (26 * (input[1] + 3 + 26(16 + input[0])/1))
+           = (input[2] + 2 + 26(input[1] + 3 + 26(16 + input[0])/1))
+
+      z_02 = (z_01 % 26 == input[1] - 11)  ? z_01 / 1  : input[1]  + 3 + (26 * z_01/1)
+           = ((16 + input[0]) % 26 == input[1] - 11)  ? (16 + input[0]) / 1  : input[1]  + 3 + (26 * (16 + input[0])/1)
+           = (false) ? <w/e> : input[1]  + 3 + (26 * (16 + input[0])/1)
+           = input[1] + 3 + 26(16 + input[0])/1)
+           = (input[1] + (419 + 26 * input[0]))
+
+      z_01 = (0 % 26    == input[0] - 14)  ? z_00 / 1  : input[0]  + 16 + (26 * z_00/1)
+        => z_01 = (16 + input[0])
+
+      insert z_00 = 0
+
+      input[3] = 9 and input[4] = 6
+        [4] = [3] - 6
+
+      input[5] = 9 and input[6] = 1
+
+      input[7] = 2 and input[8] = 9
+
+      input[10] = 1 and input[11] = 9
+
+      input[1] = 9 and input[12] = 3
+
+      input[0] = 5 and input[13] = 9
+
+                0  1  2  3  4  5  6  7  8  9 10 11 12 13
+      inputs = [1, 7, 9, 4, 1, 9, 1, 1, 8, 8, 1, 9, 1, 5]
+      17941911881915
 
 
      */
@@ -123,7 +286,10 @@ add z y
 
     public static void main(String[] args)
     {
-        long[] digits = {9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9};
+        // 554250000000 [9, 9, 4, 4, 5, 7, 4, 9, 9, 9, 9, 9, 9, 9]
+        long[] digits = {9, 9, 4, 4, 5, 7, 4, 9, 9, 9, 9, 9, 9, 9};
+        int[] skiplist = new int[] {4, 6};
+
         long count = 0;
         while (true)
         {
@@ -149,7 +315,8 @@ add z y
                     break;
                 }
             }
-            decrement(digits);
+
+            decrement(digits, skiplist);
             count++;
             if (count % 10_000_000 == 0)
             {
@@ -163,8 +330,8 @@ add z y
         final Alu alu = new Alu();
         final List<Instruction> instructions = parse(stream);
 
-
-        final long biggest = 99999999999999L;
+//      17941911881915
+        final long biggest = 17941911881915L;
 //        final long biggest = 99992129102366L;
 
         int count = 0;
@@ -193,18 +360,29 @@ add z y
         return alu;
     }
 
-    private static void decrement(long[] digits) {
+    static void decrement(long[] digits, int[] skiplist) {
         for (int i = digits.length; i > 0; i--) {
-            if (digits[i - 1] > 0L)
-            {
-                digits[i - 1] = digits[i - 1] - 1;
-                for (int j = i; j < digits.length; j++)
-                {
-                    digits[j] = 9;
+            // spot when we create a zero then stop
+            boolean skipIt = false;
+            for (int skip : skiplist) {
+                if ((i - 1) == skip) {
+                    skipIt = true;
+                    break;
                 }
-                return;
+            }
+
+            if (!skipIt) {
+                --digits[i - 1];
+                if (digits[i - 1] >= 1)
+                {
+                    for (int j = i; j < digits.length; j++) {
+                        digits[j] = 9;
+                    }
+                    return;
+                }
             }
         }
+        throw new UnsupportedOperationException(Arrays.toString(digits));
     }
 
     sealed interface RegisterValue permits Compound, Exactly, ReadInput {

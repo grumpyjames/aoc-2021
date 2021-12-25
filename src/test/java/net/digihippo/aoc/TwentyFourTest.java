@@ -532,4 +532,24 @@ class TwentyFourTest {
                 new long[] {1, 1, 1, 1, 26, 1, 26, 1, 26, 26, 1, 26, 26, 26}
         ));
     }
+
+    @Test
+    void digitDecrement() {
+
+        // 90 -> 89
+
+        int[] skiplist = new int[] { 13, 12, 11, 9, 8, 4 };
+        long[] digits = {9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9};
+        TwentyFour.decrement(digits, skiplist);
+        System.out.println(Arrays.toString(digits));
+
+        digits = new long[]{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 1, 9, 9, 9};
+        TwentyFour.decrement(digits, skiplist);
+        System.out.println(Arrays.toString(digits));
+
+        for (int i = 0; i < 1000; i++) {
+            TwentyFour.decrement(digits, skiplist);
+            System.out.println(Arrays.toString(digits));
+        }
+    }
 }
