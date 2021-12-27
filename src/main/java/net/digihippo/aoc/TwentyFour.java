@@ -468,7 +468,7 @@ add z y
     sealed interface RegisterValue permits Compound, Exactly, ReadInput {
         String expr();
         long evaluate(int[] input);
-        RegisterValue replace(int[] input);
+        RegisterValue replace(int inputIndex, int value);
         void printTo(PrintStream ps, int depth);
 
         long max();
@@ -487,10 +487,10 @@ add z y
         }
 
         @Override
-        public RegisterValue replace(int[] input) {
-            if (index < input.length)
+        public RegisterValue replace(int inputIndex, int value) {
+            if (index == inputIndex)
             {
-                return new Exactly(input[index]);
+                return new Exactly(value);
             }
             return this;
         }
@@ -523,7 +523,7 @@ add z y
         }
 
         @Override
-        public RegisterValue replace(int[] input) {
+        public RegisterValue replace(int inputIndex, int value) {
             return this;
         }
 
@@ -557,7 +557,7 @@ add z y
             Operator operator) implements RegisterValue {
         @Override
         public String expr() {
-            return left.expr() + operator.expr() + right.expr();
+            return "(" + left.expr() + " " + operator.expr() + " " + right.expr() + ")";
         }
 
         @Override
@@ -566,8 +566,16 @@ add z y
         }
 
         @Override
-        public RegisterValue replace(int[] input) {
-            return new Compound(left.replace(input), right.replace(input), operator);
+        public RegisterValue replace(int inputIndex, int value) {
+            RegisterValue newLeft = left.replace(inputIndex, value);
+            RegisterValue newRight = right.replace(inputIndex, value);
+            if (newLeft instanceof Exactly e1 && newRight instanceof Exactly e2)
+            {
+                return new Exactly(operator.execute(e1.value, e2.value));
+            }
+
+            Compound compound = new Compound(newLeft, newRight, operator);
+            return compound.simplify();
         }
 
         @Override
@@ -614,7 +622,7 @@ add z y
                     return left.min() + right.min();
                 }
                 case Mul -> {
-                    return -(left.max() * right.max());
+                    return left.min() * right.min();
                 }
                 case Div -> {
                     return 0L;
@@ -755,6 +763,34 @@ add z y
                 case Exactly e:
                     if (e.value == 1) {
                         return left;
+                    }
+                    switch (left) {
+                        case Compound c:
+                            if (c.operator == Operator.Add) {
+                                if (c.left.max() < e.value && c.right instanceof Compound d)
+                                {
+                                    if (d.left.equals(e))
+                                    {
+                                        return d.right;
+                                    }
+                                    if (d.right.equals(e))
+                                    {
+                                        return d.left;
+                                    }
+                                }
+                                else if (c.right.max() < e.value && c.left instanceof Compound d)
+                                {
+                                    if (d.left.equals(e))
+                                    {
+                                        return d.right;
+                                    }
+                                    if (d.right.equals(e))
+                                    {
+                                        return d.left;
+                                    }
+                                }
+                            }
+                        default:
                     }
                 default:
                     switch (left)
@@ -997,7 +1033,7 @@ add z y
         return lazyAlu.expressions;
     }
 
-    private sealed interface Instruction permits Add, Div, EqualityTest, Input, Mod, Multiply {
+    sealed interface Instruction permits Add, Div, EqualityTest, Input, Mod, Multiply {
         void execute(Alu alu);
         void executeLazy(LazyAlu lazyAlu);
     }
@@ -1120,7 +1156,7 @@ add z y
         return alu.registers;
     }
 
-    private static List<Instruction> parse(InputStream stream) throws IOException {
+    static List<Instruction> parse(InputStream stream) throws IOException {
         return Lines.parseLines(stream, l -> {
 
             final String[] parts = l.split(" ");

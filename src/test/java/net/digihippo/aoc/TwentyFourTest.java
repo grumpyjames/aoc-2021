@@ -1,9 +1,11 @@
 package net.digihippo.aoc;
 
+import net.digihippo.aoc.TwentyFour.Instruction;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 
 import static net.digihippo.aoc.TwentyFour.Operator.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -32,7 +34,7 @@ class TwentyFourTest {
                         """)
         );
 
-        assertEquals("{0}*-1", exprs[1].expr());
+        assertEquals("({0} * -1)", exprs[1].expr());
     }
 
     @Test
@@ -343,66 +345,6 @@ class TwentyFourTest {
         assertEquals(new TwentyFour.Exactly(25), div2.simplify());
     }
 
-    @Test
-    void simplifyMultiplyWithOneOnLeft()
-    {
-        // (* (+ {0} 16) 1)
-        final TwentyFour.Compound compound = new TwentyFour.Compound(
-                new TwentyFour.Exactly(24),
-                new TwentyFour.Compound(
-                        new TwentyFour.ReadInput(3),
-                        new TwentyFour.Exactly(4),
-                        Add
-                ),
-                Mul
-        );
-
-        final TwentyFour.Compound compoundTwo = new TwentyFour.Compound(
-                new TwentyFour.Compound(
-                        new TwentyFour.ReadInput(3),
-                        new TwentyFour.Exactly(4),
-                        Add
-                ),
-                new TwentyFour.Exactly(24),
-                Mul
-        );
-
-        final TwentyFour.Compound compoundThree = new TwentyFour.Compound(
-                new TwentyFour.Compound(
-                        new TwentyFour.Exactly(4),
-                        new TwentyFour.ReadInput(3),
-                        Add
-                ),
-                new TwentyFour.Exactly(24),
-                Mul
-        );
-
-        final TwentyFour.Compound compoundFour = new TwentyFour.Compound(
-                new TwentyFour.Compound(
-                        new TwentyFour.ReadInput(3),
-                        new TwentyFour.Exactly(4),
-                        Add
-                ),
-                new TwentyFour.Exactly(24),
-                Mul
-        );
-
-
-        final TwentyFour.Compound simpler = new TwentyFour.Compound(
-                new TwentyFour.Compound(
-                        new TwentyFour.Exactly(24),
-                        new TwentyFour.ReadInput(3),
-                        Mul),
-                new TwentyFour.Exactly(24 * 4),
-                Add
-        );
-
-        assertEquals(simpler, compound.simplify());
-        assertEquals(simpler, compoundTwo.simplify());
-        assertEquals(simpler, compoundThree.simplify());
-        assertEquals(simpler, compoundFour.simplify());
-    }
-
 //    @Test
 //    void simplifyMultiplyOfDiv() {
 //        final TwentyFour.Compound div =
@@ -514,6 +456,43 @@ class TwentyFourTest {
     }
 
     @Test
+    void minMaxUntilInputTwo() throws IOException {
+        List<Instruction> instructions = TwentyFour.parse(Inputs.puzzleInput("twentyfour.txt"));
+        TwentyFour.LazyAlu lazyAlu = new TwentyFour.LazyAlu();
+
+        for (int i = 197; i < 251; i++) {
+            instructions.get(i).executeLazy(lazyAlu);
+        }
+
+        TwentyFour.RegisterValue good = lazyAlu.expressions[3].replace(3, 6).replace(4, 3);
+        System.out.println(good.min());
+        System.out.println(good.expr());
+
+        TwentyFour.RegisterValue bad = lazyAlu.expressions[3].replace(3, 3).replace(4, 3);
+        System.out.println(bad.min());
+        System.out.println(bad.expr());
+
+        System.out.println(lazyAlu.expressions[3].min());
+        System.out.println(lazyAlu.expressions[3].expr());
+    }
+
+    @Test
+    void divScraps() {
+        TwentyFour.Compound twentySixSomething =
+                new TwentyFour.Compound(new TwentyFour.ReadInput(1), new TwentyFour.Exactly(26), Mul);
+        TwentyFour.Compound lessThanTwentySix = new TwentyFour.Compound(
+                new TwentyFour.ReadInput(2), new TwentyFour.Exactly(11), Add);
+
+        TwentyFour.Compound youBigDiv =
+                new TwentyFour.Compound(
+                        new TwentyFour.Compound(twentySixSomething, lessThanTwentySix, Add),
+                        new TwentyFour.Exactly(26),
+                        Div);
+
+        assertEquals(new TwentyFour.ReadInput(1), youBigDiv.simplify());
+    }
+
+    @Test
     void partOne() throws IOException {
         System.out.println(TwentyFour.findLargestModelNumber(Inputs.puzzleInput("twentyfour.txt")));
     }
@@ -564,6 +543,6 @@ class TwentyFourTest {
         // input[7]  + 7 != input[8]
         // input[5]  - 8 != input[6]
         // input[3]  - 3 != input[4]
-        TwentyFour.findSmallestModelNumberEager(Inputs.puzzleInput("twentyfour.txt"));
+//        TwentyFour.findSmallestModelNumberEager(Inputs.puzzleInput("twentyfour.txt"));
     }
 }
