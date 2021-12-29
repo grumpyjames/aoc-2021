@@ -465,6 +465,13 @@ add z y
         throw new UnsupportedOperationException(Arrays.toString(digits));
     }
 
+    interface ConditionalVisitor
+    {
+        void starting(Compound conditional);
+        void ended();
+    }
+
+
     sealed interface RegisterValue permits Compound, Exactly, ReadInput {
         String expr();
         long evaluate(int[] input);
@@ -473,6 +480,11 @@ add z y
 
         long max();
         long min();
+        void visit(ConditionalVisitor conditionals);
+
+        boolean primitive();
+
+        RegisterValue substitute(Compound compound, Exactly exactly);
     }
 
     record ReadInput(int index) implements RegisterValue {
@@ -509,6 +521,21 @@ add z y
         public long min() {
             return 1;
         }
+
+        @Override
+        public void visit(ConditionalVisitor conditionals) {
+
+        }
+
+        @Override
+        public boolean primitive() {
+            return true;
+        }
+
+        @Override
+        public RegisterValue substitute(Compound compound, Exactly exactly) {
+            return this;
+        }
     }
 
     record Exactly(long value) implements RegisterValue {
@@ -541,6 +568,21 @@ add z y
         public long min() {
             return value;
         }
+
+        @Override
+        public void visit(ConditionalVisitor conditionals) {
+
+        }
+
+        @Override
+        public boolean primitive() {
+            return true;
+        }
+
+        @Override
+        public RegisterValue substitute(Compound compound, Exactly exactly) {
+            return this;
+        }
     }
 
     static Compound newCompound(
@@ -569,8 +611,14 @@ add z y
         public RegisterValue replace(int inputIndex, int value) {
             RegisterValue newLeft = left.replace(inputIndex, value);
             RegisterValue newRight = right.replace(inputIndex, value);
+            if (operator == Operator.Add && newRight.equals(new Exactly(0)))
+            {
+                return newLeft;
+            }
+
             if (newLeft instanceof Exactly e1 && newRight instanceof Exactly e2)
             {
+
                 return new Exactly(operator.execute(e1.value, e2.value));
             }
 
@@ -607,6 +655,9 @@ add z y
                 case Eq -> {
                     return 1L;
                 }
+                case Neq -> {
+                    return 1L;
+                }
 //                case Rem -> {
 //                    return left.max();
 //                }
@@ -633,12 +684,43 @@ add z y
                 case Eq -> {
                     return 0L;
                 }
+                case Neq -> {
+                    return 0L;
+                }
 //                case Rem -> {
 //                    // too hard to think about
 //                    return Long.MIN_VALUE;
 //                }
                 default -> throw new UnsupportedOperationException();
             }
+        }
+
+        @Override
+        public void visit(ConditionalVisitor conditionals) {
+            boolean conditional = operator == Operator.Eq || operator == Operator.Neq;
+            if (conditional)
+            {
+                if (left instanceof Compound d &&
+                        d.operator == Operator.Add && d.left instanceof ReadInput && d.right instanceof Exactly &&
+                        right instanceof ReadInput r) {
+                    conditionals.starting(this);
+                }
+                else
+                {
+                    left.visit(conditionals);
+                    right.visit(conditionals);
+                }
+            }
+            else
+            {
+                left.visit(conditionals);
+                right.visit(conditionals);
+            }
+        }
+
+        @Override
+        public boolean primitive() {
+            return false;
         }
 
         public RegisterValue simplify() {
@@ -833,6 +915,16 @@ add z y
         }
 
         private RegisterValue simplifyAdd() {
+            if (left.equals(new Exactly(0)))
+            {
+                return right;
+            }
+
+            if (right.equals(new Exactly(0)))
+            {
+                return left;
+            }
+
             switch (left)
             {
                 case Exactly e:
@@ -894,6 +986,24 @@ add z y
                 return new Exactly(0);
             }
 
+            if (
+                    left.equals(new Exactly(0)) &&
+                    right instanceof Compound c &&
+                    c.operator == Operator.Eq
+            )
+            {
+                return new Compound(c.left, c.right, Operator.Neq);
+            }
+
+            if (
+                    right.equals(new Exactly(0)) &&
+                    left instanceof Compound c &&
+                    c.operator == Operator.Eq
+            )
+            {
+                return new Compound(c.left, c.right, Operator.Neq);
+            }
+
             switch (left)
             {
                 case Compound c:
@@ -937,6 +1047,19 @@ add z y
             }
 
             return this;
+        }
+
+        @Override
+        public RegisterValue substitute(Compound compound, Exactly exactly) {
+            if (this.equals(compound))
+            {
+                return exactly;
+            }
+
+            RegisterValue newLeft = left.substitute(compound, exactly);
+            RegisterValue newRight = right.substitute(compound, exactly);
+
+            return new Compound(newLeft, newRight, operator).simplify();
         }
     }
 
@@ -997,7 +1120,8 @@ add z y
         Mul((long one, long two) -> one * two, "*"),
         Div((long one, long two) -> one / two, "/"),
         Mod((long one, long two) -> one % two, "%"),
-        Eq((long one, long two) -> one == two ? 1 : 0, "==");
+        Eq((long one, long two) -> one == two ? 1 : 0, "=="),
+        Neq((long one, long two) -> one != two ? 1 : 0, "!=");
 //        Rem((long one, long two) -> one - (one % two), "rem");
 
         Operator(LongFunction lf, String expr) {

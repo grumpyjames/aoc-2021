@@ -4,8 +4,7 @@ import net.digihippo.aoc.TwentyFour.Instruction;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 import static net.digihippo.aoc.TwentyFour.Operator.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -345,7 +344,22 @@ class TwentyFourTest {
         assertEquals(new TwentyFour.Exactly(25), div2.simplify());
     }
 
-//    @Test
+    @Test
+    void squishIntoNeq() {
+        TwentyFour.Compound inner = new TwentyFour.Compound(
+                new TwentyFour.ReadInput(1),
+                new TwentyFour.ReadInput(2),
+                Eq
+        );
+        TwentyFour.Compound outer = new TwentyFour.Compound(inner, new TwentyFour.Exactly(0), Eq);
+
+        assertEquals(
+                new TwentyFour.Compound(new TwentyFour.ReadInput(1), new TwentyFour.ReadInput(2), Neq),
+                outer.simplify()
+        );
+    }
+
+    //    @Test
 //    void simplifyMultiplyOfDiv() {
 //        final TwentyFour.Compound div =
 //                new TwentyFour.Compound(
@@ -460,20 +474,33 @@ class TwentyFourTest {
         List<Instruction> instructions = TwentyFour.parse(Inputs.puzzleInput("twentyfour.txt"));
         TwentyFour.LazyAlu lazyAlu = new TwentyFour.LazyAlu();
 
-        for (int i = 197; i < 251; i++) {
+        for (int i = 0; i < 251; i++) {
             instructions.get(i).executeLazy(lazyAlu);
         }
 
-        TwentyFour.RegisterValue good = lazyAlu.expressions[3].replace(3, 6).replace(4, 3);
-        System.out.println(good.min());
-        System.out.println(good.expr());
+        MyConditionalVisitor myVis = new MyConditionalVisitor();
+        lazyAlu.expressions[3].visit(myVis);
+        TwentyFour.RegisterValue ew = lazyAlu.expressions[3];
+        // these are in dependency order, simplest first.
+        final List<TwentyFour.Compound> best = new ArrayList<>();
 
-        TwentyFour.RegisterValue bad = lazyAlu.expressions[3].replace(3, 3).replace(4, 3);
-        System.out.println(bad.min());
-        System.out.println(bad.expr());
+        // technically should try replacing each with vrai _ou_ faux,
+        // but ain't nobody got time for that.
+        final TwentyFour.Exactly faux = new TwentyFour.Exactly(0);
+        while (!myVis.compounds.isEmpty())
+        {
+            best.addAll(myVis.compounds);
+            for (TwentyFour.Compound compound : myVis.compounds) {
+                ew = ew.substitute(compound, faux);
+            }
+            myVis.compounds.clear();
+            ew.visit(myVis);
+        }
 
-        System.out.println(lazyAlu.expressions[3].min());
-        System.out.println(lazyAlu.expressions[3].expr());
+        System.out.println("All of these false => MONAD OMG: ");
+        for (TwentyFour.Compound conditional : best) {
+            System.out.println("\t" + conditional.expr());
+        }
     }
 
     @Test
@@ -544,5 +571,18 @@ class TwentyFourTest {
         // input[5]  - 8 != input[6]
         // input[3]  - 3 != input[4]
 //        TwentyFour.findSmallestModelNumberEager(Inputs.puzzleInput("twentyfour.txt"));
+    }
+
+    private static class MyConditionalVisitor implements TwentyFour.ConditionalVisitor {
+        final Set<TwentyFour.Compound> compounds = new HashSet<>();
+
+        @Override
+        public void starting(TwentyFour.Compound conditional) {
+            compounds.add(conditional);
+        }
+
+        @Override
+        public void ended() {
+        }
     }
 }
